@@ -5,6 +5,10 @@ import Data.Buffer
 
 %default total
 
+%inline
+floatToByte : Double -> Bits8
+floatToByte d = prim__truncInt_B8 (min (prim__fromFloatInt ((sqrt d) * 255)) 255)
+
 private
 writeLines : (file : File) -> (width, height : Nat) -> (render : (x, y : Nat) -> Colour) -> IO ()
 writeLines file width@(S width') height@(S height') render = 
@@ -16,9 +20,9 @@ writeLines file width@(S width') height@(S height') render =
           let loc' = loc + 3 in
           case render rx y of
             MkColour r g b => do
-              setByte buf loc (prim__truncInt_B8 (min (prim__fromFloatInt ((sqrt r) * 255)) 255))
-              setByte buf (loc + 1) (prim__truncInt_B8 (min (prim__fromFloatInt ((sqrt g) * 255)) 255))
-              setByte buf (loc + 2) (prim__truncInt_B8 (min (prim__fromFloatInt ((sqrt b) * 255)) 255))
+              setByte buf loc (floatToByte r)
+              setByte buf (loc + 1) (floatToByte g)
+              setByte buf (loc + 2) (floatToByte b)
               case x of
                 S x' => run loc' buf (S rx) x' y
                 Z => case y of
