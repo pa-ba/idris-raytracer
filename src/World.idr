@@ -75,7 +75,7 @@ render fileName (MkScene shapes ambient lights)
         resWidth = width / (cast pixelWidth)
         resHeight : Double
         resHeight = height / (cast pixelHeight)
-        tracePixel : Nat -> Nat -> RGB
+        tracePixel : Nat -> Nat -> Colour
         tracePixel x y = 
             let xv = resWidth * (cast x - cast pixelWidth * 0.5)
                 yv = resHeight * (cast y - cast pixelHeight * 0.5)
@@ -88,5 +88,5 @@ render fileName (MkScene shapes ambient lights)
                           p = location + (distance `scale` direction) + (0.00001 `scale` normal')
                           shading = traceShadowRays shapes lights ambient p normal'
                           colour' = colour * shading
-                      in cast colour'
-                 Nothing => MkRGB 0 0 0
+                      in colour'
+                 Nothing => MkColour 0 0 0
