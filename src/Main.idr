@@ -7,7 +7,7 @@ import Shapes
 import Colour
 
 
-
+total
 main : IO ()
 main = 
   let light = MkLight (mkPoint 0.0 0.0 4.0) (MkColour 1 1 1)

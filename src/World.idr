@@ -6,7 +6,7 @@ import Light
 import Colour
 import PPM
 
-
+%default total
 %access public export
 
 record Camera where
@@ -14,7 +14,7 @@ record Camera where
   location, lookat : Point
   up : Vector
   zoom, width, height : Double
-  pixelWidth, pixelHeight : Int
+  pixelWidth, pixelHeight : Nat
   
 
 record Scene where
@@ -75,7 +75,7 @@ render fileName (MkScene shapes ambient lights)
         resWidth = width / (cast pixelWidth)
         resHeight : Double
         resHeight = height / (cast pixelHeight)
-        tracePixel : Int -> Int -> RGB
+        tracePixel : Nat -> Nat -> RGB
         tracePixel x y = 
             let xv = resWidth * (cast x - cast pixelWidth * 0.5)
                 yv = resHeight * (cast y - cast pixelHeight * 0.5)

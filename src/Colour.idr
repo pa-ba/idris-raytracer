@@ -1,6 +1,6 @@
 module Colour
 
-
+%default total
 %access public export
 
 record Colour where
