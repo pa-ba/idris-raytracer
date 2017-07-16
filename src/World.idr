@@ -60,7 +60,6 @@ traceShadowRays shapes ls (MkAmbient acol) p n = run acol ls
            let cos = dot n nd in
            if cos > 0.00001 then run (acc + (cos `scale` lcol)) xs else run acc xs
 
-
 render : (fileName : String) -> Scene -> Camera -> IO ()
 render fileName (MkScene shapes ambient lights) 
   (MkCamera location lookat up zoom width height pixelWidth pixelHeight) =
@@ -89,4 +88,4 @@ render fileName (MkScene shapes ambient lights)
                           shading = traceShadowRays shapes lights ambient p normal'
                           colour' = colour * shading
                       in colour'
-                 Nothing => MkColour 0 0 0
+                 Nothing => black

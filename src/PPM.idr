@@ -16,9 +16,7 @@ parallel = 12
 private
 writeLines : (buf : Buffer) -> (width, height : Nat) -> (render : (x, y : Nat) -> Colour) -> IO ()
 writeLines buf width@(S width') height@(S height') render = 
-  do if parallel > 1
-       then run' [] 0 height'
-       else run 0 Z width' height' height
+  do run' [] 0 height'
   where chunkSize : Nat
         chunkSize = (S height') `div` parallel
         run : Int -> Nat -> Nat -> Nat -> Nat -> IO ()
@@ -41,18 +39,21 @@ writeLines buf width@(S width') height@(S height') render =
           unsafeRecv () s
           waitForChildren ss
         run' : List Channel -> Int -> Nat -> IO ()
-        run' ss _ Z = waitForChildren ss
-        run' ss loc y = do
-          Just pid <- spawn $ do
-            Just sess <- listen 1000000
-            | Nothing => putStrLn "cannot listen to parent thread"
+        run' ss loc y = 
+          if y < chunkSize then do
             run loc Z width' y chunkSize
-            unsafeSend sess ()
-            pure ()
-          | Nothing => putStrLn "cannot spawn thread!"
-          Just sess <- connect pid
-          | Nothing => putStrLn "cannot connect to child thread"
-          run' (sess :: ss) (loc + (3 * cast (S width') * cast chunkSize)) (y `minus` chunkSize)
+            waitForChildren ss
+          else do
+            Just pid <- spawn $ do
+              Just sess <- listen 1000000
+              | Nothing => putStrLn "cannot listen to parent thread"
+              run loc Z width' y chunkSize
+              unsafeSend sess ()
+              pure ()
+            | Nothing => putStrLn "cannot spawn thread!"
+            Just sess <- connect pid
+            | Nothing => putStrLn "cannot connect to child thread"
+            run' (sess :: ss) (loc + (3 * cast (S width') * cast chunkSize)) (y `minus` chunkSize)
 writeLines _ _ _ _ = pure ()
 
 export

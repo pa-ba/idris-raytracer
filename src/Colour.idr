@@ -42,3 +42,7 @@ record RGB where
 Cast Colour RGB where
   cast (MkColour r g b) = 
     MkRGB (min (cast (sqrt r * 255)) 255) (min (cast (sqrt g * 255)) 255) (min (cast (sqrt b * 255)) 255)
+
+
+black : Colour
+black = MkColour 0 0 0
