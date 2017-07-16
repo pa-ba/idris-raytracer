@@ -6,7 +6,7 @@ import Light
 import Colour
 import PPM
 
-%default total
+
 %access public export
 
 record Camera where
