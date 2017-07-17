@@ -49,49 +49,85 @@ mkShape s = MkShape Nothing s
 
 record Sphere where
   constructor MkSphere
-  radius : Double
   texture : Texture
 
 %inline
-solve2ndD' : (nothing : t) -> (just : Double -> t) -> (a, b, c : Double) -> t
-solve2ndD' nothing just a b c = 
+solve2ndD' : (nothing : t) -> (comp : Double -> i) -> (check : i -> Bool) -> (just : i -> t) -> (a, b, c : Double) -> t
+solve2ndD' nothing comp check just a b c = 
     let disc = b * b - 4.0 * a * c in
     if disc < 0.0 then nothing
     else
       let e = sqrt disc
           denom = 2.0 * a
-          t1 = (-b - e) / denom in
-      if t1 > 0.0 then 
-        just t1
+          t1 = (-b - e) / denom
+          r1 = comp t1 in
+      if t1 > 0.0 && check r1 then 
+        just r1
       else 
-        let t2 = (-b + e) / denom in
-        if t2 > 0.0 then
-          just t2
+        let t2 = (-b + e) / denom
+            r2 = comp t2 in
+        if t2 > 0.0 && check r2 then
+          just r2
         else nothing
 
 solve2ndD : (a, b, c : Double) -> Maybe Double
-solve2ndD =  solve2ndD' Nothing Just
+solve2ndD =  solve2ndD' Nothing id (const True) Just
 
 
 IsShape Sphere where
-  hit (MkSphere radius tex) (MkRay origin dir) = 
+  hit (MkSphere tex) (MkRay origin dir) = 
     let a = dir `dot` dir
         b = 2.0 * (origin `dot` dir)
-        c = (origin `dot` origin) - radius * radius
-    in solve2ndD' Nothing just a b c
+        c = (origin `dot` origin) - 1
+    in solve2ndD' Nothing id (const True) just a b c
     where just t =
             case tex of 
               Constant mat@(MkMaterial colour reflection) => 
-                Just (MkHit t mat ((origin + (t `scale` dir))/radius))
+                Just (MkHit t mat ((origin + (t `scale` dir))))
 
-  shadowHit (MkSphere radius tex) (MkRay origin dir) = 
+  shadowHit (MkSphere tex) (MkRay origin dir) = 
     let a = dir `dot` dir
-        b = 2.0 * (origin `dot` dir)
-        c = (origin `dot` origin) - radius * radius
-    in solve2ndD' False just a b c
+        b = 2.0 * (origin `dot` dir) - 1
+        c = origin `dot` origin
+    in solve2ndD' False id (const True) just a b c
     where just t = t < 1
             
-mkSphere : (radius : Double) -> (texture : Texture) -> Shape
-mkSphere radius texture = mkShape $ MkSphere radius texture
+mkSphere : (centre : Point) -> (radius : Double) -> (texture : Texture) -> Shape
+mkSphere centre radius texture = 
+  MkShape (Just (merge [scale radius radius radius,translateByVector centre])) 
+          (MkSphere texture)
+
+record Cylinder where
+  constructor MkCylinder
+  texture : Texture
 
 
+IsShape Cylinder where
+  hit (MkCylinder tex) ray@(MkRay origin dir) = 
+    let a = x dir * x dir + z dir * z dir
+        b = 2.0 * (x origin * x dir + z origin * z dir)
+        c = (x origin * x origin + z origin * z origin) - 1.0
+    in solve2ndD' Nothing comp check just a b c
+    where comp : Double -> (Point, Double)
+          comp d = (origin + (d `scale` dir), d)
+          check (ip,d) = y ip <= 1 && y ip >= -1
+          just (ip,d) =
+              case tex of 
+                Constant mat@(MkMaterial colour reflection) => 
+                  Just (MkHit d mat (MkVector (x ip) 0 (z ip)))
+
+  shadowHit (MkCylinder tex) ray@(MkRay origin dir) = 
+    let a = x dir * x dir + z dir * z dir
+        b = 2.0 * (x origin * x dir + z origin * z dir)
+        c = (x origin * x origin + z origin * z origin) - 1.0
+    in solve2ndD' False id check (const True) a b c
+    where check d = 
+            if d >= 1 then False
+            else
+              let ip = origin + (d `scale` dir) in
+              y ip <= 1 && y ip >= -1
+
+mkCylinder : (centre : Point) -> (radius, height : Double) ->(tex : Texture) -> Shape
+mkCylinder centre radius height tex = 
+  MkShape (Just (merge [scale radius (height / 2) radius, translateByVector centre ]))
+          (MkCylinder tex)

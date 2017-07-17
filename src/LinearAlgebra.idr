@@ -66,6 +66,9 @@ record Ray where
 
 %name Ray r, s
 
+march : Ray -> Double -> Point
+march (MkRay origin direction) d = origin + (d `scale` direction)
+
 record Matrix where
   constructor MkMatrix
   xx, yx, zx, ox : Double

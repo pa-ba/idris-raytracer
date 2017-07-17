@@ -28,6 +28,9 @@ translate x y z =
               0 1 0 (negate y)
               0 0 1 (negate z))
 
+translateByVector : Vector -> Transformation
+translateByVector (MkVector x y z) = translate x y z
+
 scale : (x, y, z : Double) -> Transformation
 scale x y z = 
   MkTransformation

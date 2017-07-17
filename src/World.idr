@@ -20,8 +20,8 @@ record Camera where
 record Scene where
   constructor MkScene
   shapes : List Shape
-  ambient : Ambient
   lights : List Light
+  ambient : Ambient
 
 total
 closestHit : Maybe Hit -> Maybe Hit -> Maybe Hit
@@ -61,7 +61,7 @@ traceShadowRays shapes ls (MkAmbient acol) p n = run acol ls
            if cos > 0.00001 then run (acc + (cos `scale` lcol)) xs else run acc xs
 
 render : (fileName : String) -> Scene -> Camera -> IO ()
-render fileName (MkScene shapes ambient lights) 
+render fileName (MkScene shapes lights ambient) 
   (MkCamera location lookat up zoom width height pixelWidth pixelHeight) =
     writePPM fileName pixelWidth pixelHeight tracePixel
   where w : Vector
