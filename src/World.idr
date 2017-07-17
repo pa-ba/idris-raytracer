@@ -36,13 +36,13 @@ findClosestHit : List Shape -> Ray -> Maybe Hit
 findClosestHit shapes ray = run Nothing shapes
   where run : Maybe Hit -> List Shape -> Maybe Hit
         run h [] = h
-        run h (MkShape x :: xs) = 
+        run h (x :: xs) = 
           run (h `closestHit` hit x ray) xs
 
 total
 findShadowHit : List Shape -> Ray -> Bool
 findShadowHit [] r = False
-findShadowHit (MkShape x :: xs) r = shadowHit x r || findShadowHit xs r
+findShadowHit (x :: xs) r = shadowHit x r || findShadowHit xs r
 
 
 traceShadowRays : List Shape -> List Light -> Ambient -> Point -> Vector -> Colour
