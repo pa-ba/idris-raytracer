@@ -26,9 +26,9 @@ data Shape : Type where
   MkShape : Maybe Transformation -> (IsShape s => s -> Shape)
   
 
-transformShape : Transformation -> Shape -> Shape
-transformShape tr (MkShape Nothign sh) = MkShape (Just tr) sh
-transformShape tr (MkShape (Just tr') sh) = MkShape (Just (merge [tr', tr])) sh
+transform : Transformation -> Shape -> Shape
+transform tr (MkShape Nothign sh) = MkShape (Just tr) sh
+transform tr (MkShape (Just tr') sh) = MkShape (Just (merge [tr', tr])) sh
   
   
 namespace Shape
@@ -73,6 +73,8 @@ solve2ndD' nothing comp check just a b c =
 solve2ndD : (a, b, c : Double) -> Maybe Double
 solve2ndD =  solve2ndD' Nothing id (const True) Just
 
+twoPi : Double
+twoPi = 2 * Doubles.pi
 
 IsShape Sphere where
   hit (MkSphere tex) (MkRay origin dir) = 
@@ -81,9 +83,17 @@ IsShape Sphere where
         c = (origin `dot` origin) - 1
     in solve2ndD' Nothing id (const True) just a b c
     where just t =
-            case tex of 
-              Constant mat@(MkMaterial colour reflection) => 
-                Just (MkHit t mat ((origin + (t `scale` dir))))
+            let ip = origin + (t `scale` dir)
+                mat = case tex of 
+                        MkConstTexture mat => mat
+                        MkTexture tex => 
+                          let v = 1.0 - (acos (y ip) / Doubles.pi) 
+                              phi' = atan2 (x ip) (z ip)
+                              phi = if phi' < 0.0 then phi' + twoPi else phi'
+                              u = phi / twoPi
+                          in tex u v
+            in Just (MkHit t mat ip)
+            
 
   shadowHit (MkSphere tex) (MkRay origin dir) = 
     let a = dir `dot` dir
@@ -112,9 +122,14 @@ IsShape Cylinder where
           comp d = (origin + (d `scale` dir), d)
           check (ip,d) = y ip <= 1 && y ip >= -1
           just (ip,d) =
-              case tex of 
-                Constant mat@(MkMaterial colour reflection) => 
-                  Just (MkHit d mat (MkVector (x ip) 0 (z ip)))
+            let mat = case tex of 
+                        MkConstTexture mat => mat
+                        MkTexture tex => 
+                          let phi' = atan2 (x ip) (z ip)
+                              phi = if phi' < 0.0 then phi' + twoPi else phi'
+                              u = phi / twoPi
+                          in tex u ((y ip + 1)/2)
+            in Just (MkHit d mat (MkVector (x ip) 0 (z ip)))
 
   shadowHit (MkCylinder tex) ray@(MkRay origin dir) = 
     let a = x dir * x dir + z dir * z dir

@@ -33,7 +33,7 @@ record Material where
   
 %name Material mat
 
-data Texture = Constant Material
+data Texture = MkConstTexture Material | MkTexture (Double -> Double -> Material)
 
 record RGB where
   constructor MkRGB
@@ -46,3 +46,12 @@ Cast Colour RGB where
 
 black : Colour
 black = MkColour 0 0 0
+
+white : Colour
+white = MkColour 1 1 1
+
+red : Colour
+red = MkColour 1 0 0
+
+green : Colour
+green = MkColour 0 0.25 0
