@@ -21,61 +21,69 @@ interface IsShape s where
     case hit s r of
       Just (MkHit distance _ _) => distance <= 1.0
       Nothing => False
-  inside : Maybe (s -> Point -> Bool)
-  inside = Nothing
 
---interface IsCSG s where
---  inside : s -> Point -> Bool
+interface IsCSG s where
+  inside : s -> Point -> Bool
 
 data Shape : Type where
-  MkShape : Maybe Transformation -> (IsShape s => s -> Shape)
+  MkShape : IsShape s => Transformation -> s -> Shape
   
 
-  
---data ShapeCSG : Shape -> Type where
---  MkShapeCSG : {m : Maybe Transformation} -> ((IsShape t, IsCSG t) => {s : t} -> ShapeCSG (MkShape m s))
-
-
-  
--- canCSG : Shape -> Bool
--- canCSG (MkShape {s=sType} _ s) = isJust (isInside {s = sType})
-
---union : (s1, s2 : Shape) -> {auto c1 : ShapeCSG s1} -> {auto c2 : ShapeCSG s2} -> Shape
---union (MkShape m s) (MkShape m' s') {c1 = MkShapeCSG} {c2 = MkShapeCSG} = ?union_rhs_1
 
 transform : Transformation -> Shape -> Shape
-transform tr (MkShape Nothign sh) = MkShape (Just tr) sh
-transform tr (MkShape (Just tr') sh) = MkShape (Just (merge [tr', tr])) sh
+transform tr (MkShape tr' sh) = MkShape (merge tr' tr) sh
+
+hitTransformed : IsShape s => Transformation -> s -> Ray -> Maybe Hit
+hitTransformed tr s r =
+  case hit s (inverseTransformRay tr r) of
+     Nothing => Nothing
+     Just h => Just $ record {normal $= transformNormal tr} h
   
+
+shadowHitTransformed : IsShape s => Transformation -> s -> Ray -> Bool
+shadowHitTransformed tr s r = shadowHit s (inverseTransformRay tr r)
+
+insideTransformed : IsCSG s => Transformation -> s -> Point -> Bool
+insideTransformed t s p = inside s (inverseTransformPoint t p)
+
+
+data ShapeCSG : Shape -> Type where
+  MkShapeCSG : (IsShape t, IsCSG t) =>  {m : Transformation} -> {s : t} -> ShapeCSG (MkShape m s)
+
+
+data Union : Type where
+  MkUnion : (IsShape s1, IsCSG s1, IsShape s2, IsCSG s2) => (t1, t2 : Transformation) -> s1 -> s2 -> Union
+
+IsShape Union where
+  hit (MkUnion t1 t2 s1 s2) r = 
+    case hitTransformed t1 s1 r of
+      Nothing => hitTransformed t2 s2 r
+      res @ (Just h1) => 
+        case hitTransformed t2 s2 r of
+          Nothing => res
+          Just h2 => 
+            let (h1',h2') = if distance h1 < distance h2 then (h1, h2) else (h2, h1)
+                ip = march r (distance h1') in
+            ?IsShape_rhs_1
+  shadowHit x r = ?IsShape_rhs_2
+
+IsCSG Union where
+  inside (MkUnion t1 t2 s1 s2) p = insideTransformed t1 s1 p || insideTransformed t2 s2 p
+
+
+union : (s1, s2 : Shape) -> {auto c1 : ShapeCSG s1} -> {auto c2 : ShapeCSG s2} -> Shape
+union (MkShape m s) (MkShape m' s') {c1 = MkShapeCSG} {c2 = MkShapeCSG} = MkShape identity (MkUnion m m' s s')  
   
 namespace Shape
   hit : Shape -> Ray -> Maybe Hit
-  hit (MkShape Nothing s) r = hit s r
-  hit (MkShape (Just (MkTransformation _ inverse)) s) r = 
-    case hit s (transformRay inverse r) of
-       Nothing => Nothing
-       Just h => Just $ record {normal $= transformNormal inverse} h
+  hit (MkShape tr s) r = hitTransformed tr s r
   
   shadowHit : Shape -> Ray -> Bool
-  shadowHit (MkShape Nothing s) r = shadowHit s r
-  shadowHit (MkShape (Just tr) s) r = shadowHit s (transformRay (inverse tr) r)
-
-  inside : Shape -> Maybe (Point -> Bool)
-  inside (MkShape {s} t sh) = 
-    case inside {s=s} of
-      Nothing => Nothing
-      Just f => Just (f sh)
-  
-data ShapeCSG : Shape -> Type where
-  MkShapeCSG :  {auto prf : inside s = Just fun} -> ShapeCSG s
-
-union : (s1, s2 : Shape) -> {auto c1 : ShapeCSG s1} -> {auto c2 : ShapeCSG s2} -> Shape
-union s1 s2 {c1 = MkShapeCSG {fun = f1}} {c2 = MkShapeCSG {fun = f2}} = ?union_rhs_2
-
+  shadowHit (MkShape tr s) r = shadowHitTransformed tr s r
   
       
 mkShape : IsShape s => s -> Shape
-mkShape s = MkShape Nothing s
+mkShape s = MkShape identity s
 
 record Sphere where
   constructor MkSphere
@@ -132,15 +140,13 @@ IsShape Sphere where
     in solve2ndD' False id (const True) just a b c
     where just t = t < 1
     
-  inside = Just fun
-    where fun (MkSphere _) (MkVector x y z) = x * x + y * y + z * z < 1
     
---IsCSG Sphere where
---  inside (MkSphere _) (MkVector x y z) = x * x + y * y + z * z < 1
+IsCSG Sphere where
+  inside (MkSphere _) (MkVector x y z) = x * x + y * y + z * z < 1
             
 mkSphere : (centre : Point) -> (radius : Double) -> (texture : Texture) -> Shape
 mkSphere centre radius texture = 
-  MkShape (Just (merge [scale radius radius radius,translateByVector centre])) 
+  MkShape (merge (scale radius radius radius) (translateByVector centre)) 
           (MkSphere texture)
 
 record Cylinder where
@@ -180,5 +186,5 @@ IsShape Cylinder where
 
 mkCylinder : (centre : Point) -> (radius, height : Double) ->(tex : Texture) -> Shape
 mkCylinder centre radius height tex = 
-  MkShape (Just (merge [scale radius (height / 2) radius, translateByVector centre ]))
+  MkShape (merge (scale radius (height / 2) radius) (translateByVector centre))
           (MkCylinder tex)

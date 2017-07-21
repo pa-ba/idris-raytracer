@@ -2,21 +2,14 @@ module Transformation
 
 import LinearAlgebra
 %access public export
+%default total
 
-
-record Transformation where
-  constructor MkTransformation
-  matrix, inverse : Matrix
+data Transformation : Type where
+  MkTransformation : (matrix, inverse : Matrix) -> Transformation
+  IdentityTransformation : Transformation
 
 identity : Transformation
-identity = 
-  MkTransformation
-    (MkMatrix 1 0 0 0
-              0 1 0 0
-              0 0 1 0)
-    (MkMatrix 1 0 0 0
-              0 1 0 0
-              0 0 1 0)
+identity = IdentityTransformation
               
 translate : (x, y, z : Double) -> Transformation
 translate x y z = 
@@ -72,9 +65,31 @@ rotateZ angle =
               0 0 1 0)
 
 
-merge : List Transformation -> Transformation
-merge [] = identity
-merge (MkTransformation ma inv :: xs) = run ma inv xs
+merge : Transformation -> Transformation -> Transformation
+merge IdentityTransformation t = t
+merge t IdentityTransformation = t
+merge (MkTransformation ma inv) (MkTransformation ma' inv') = 
+  MkTransformation (ma' * ma) (inv * inv')
+
+mergeAll : List Transformation -> Transformation
+mergeAll [] = identity
+mergeAll (IdentityTransformation :: xs) = mergeAll xs
+mergeAll (MkTransformation ma inv :: xs) = run ma inv xs
   where run : Matrix -> Matrix -> List Transformation -> Transformation
         run ma inv [] = MkTransformation ma inv
         run ma inv ((MkTransformation matrix inverse) :: xs) = run (matrix * ma) (inv * inverse) xs
+        run ma inv (IdentityTransformation :: xs) = run ma inv xs
+
+
+inverseTransformRay : Transformation -> Ray -> Ray
+inverseTransformRay (MkTransformation _ inverse) r = transformRay inverse r
+inverseTransformRay IdentityTransformation r = r
+
+inverseTransformPoint : Transformation -> Point -> Point
+inverseTransformPoint (MkTransformation _ inverse) r = transformPoint inverse r
+inverseTransformPoint IdentityTransformation r = r
+
+transformNormal : Transformation -> Vector -> Vector
+transformNormal (MkTransformation _ inverse) v = transformNormal inverse v
+transformNormal IdentityTransformation v = v
+
