@@ -41,9 +41,9 @@ findClosestHit shapes ray = run Nothing shapes
           run (h `closestHit` hit x ray) xs
 
 total
-findShadowHit : List Shape -> Ray -> Bool
-findShadowHit [] r = False
-findShadowHit (x :: xs) r = shadowHit x r || findShadowHit xs r
+findShadowHit : List Shape -> Ray -> Double -> Bool
+findShadowHit [] r d = False
+findShadowHit (x :: xs) r d = isJust (hitBefore x r d) || findShadowHit xs r d
 
 
 traceShadowRays : List Shape -> List Light -> Ambient -> Point -> Vector -> Colour
@@ -54,8 +54,8 @@ traceShadowRays shapes ls (MkAmbient acol) p n = run acol ls
           let d = L.direction p location
               m = magnitude d
               nd = d / m -- normalise d
-              r = MkRay p d in
-          if findShadowHit shapes r
+              r = MkRay p nd in
+          if findShadowHit shapes r m
           then run acc xs
           else
            let cos = dot n nd in

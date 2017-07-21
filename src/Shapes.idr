@@ -14,76 +14,132 @@ record Hit where
   
 %name Hit h
 
-interface IsShape s where
-  hit : s -> Ray -> Maybe Hit
-  shadowHit : s -> Ray -> Bool
-  shadowHit s r = 
-    case hit s r of
-      Just (MkHit distance _ _) => distance <= 1.0
-      Nothing => False
+mutual
+  interface IsShape s where
+    hit : s -> Ray -> Maybe Hit
+    hitBefore : s -> Ray -> Double -> Maybe Double
+    hitBefore s r d = 
+      case hit s r of
+        Just (MkHit distance _ _) => if (distance <= d) then Just distance else Nothing
+        Nothing => Nothing
+    transformedShape : s -> DecomposeTrans
+    transformedShape _ = defaultTrans
+    
+  data DecomposeTrans : Type where
+    NotTrans : DecomposeTrans
+    Trans : IsShape s => Transformation -> s -> DecomposeTrans
+    
+  defaultTrans : DecomposeTrans
+  defaultTrans = NotTrans
+
+  data Shape : Type where
+      MkShape : IsShape s => s -> Shape
+
+  data TransformedShape : Type -> Type where
+    MkTransformedShape : Transformation -> s -> TransformedShape s
+    
+IsShape s => IsShape (TransformedShape s) where
+  hit (MkTransformedShape tr s) r =
+   case hit s (inverseTransformRay tr r) of
+      Nothing => Nothing
+      Just h => Just $ record {normal $= transformNormal tr} h
+      
+  hitBefore (MkTransformedShape tr s) r d = hitBefore s (inverseTransformRay tr r) d
+
+      
+  transformedShape (MkTransformedShape t s) = Trans t s
+ 
 
 interface IsCSG s where
   inside : s -> Point -> Bool
 
-data Shape : Type where
-  MkShape : IsShape s => Transformation -> s -> Shape
-  
 
-
-transform : Transformation -> Shape -> Shape
-transform tr (MkShape tr' sh) = MkShape (merge tr' tr) sh
-
-hitTransformed : IsShape s => Transformation -> s -> Ray -> Maybe Hit
-hitTransformed tr s r =
-  case hit s (inverseTransformRay tr r) of
-     Nothing => Nothing
-     Just h => Just $ record {normal $= transformNormal tr} h
-  
-
-shadowHitTransformed : IsShape s => Transformation -> s -> Ray -> Bool
-shadowHitTransformed tr s r = shadowHit s (inverseTransformRay tr r)
-
-insideTransformed : IsCSG s => Transformation -> s -> Point -> Bool
-insideTransformed t s p = inside s (inverseTransformPoint t p)
+IsCSG s => IsCSG (TransformedShape s) where
+  inside (MkTransformedShape t s) p = inside s (inverseTransformPoint t p)
 
 
 data ShapeCSG : Shape -> Type where
-  MkShapeCSG : (IsShape t, IsCSG t) =>  {m : Transformation} -> {s : t} -> ShapeCSG (MkShape m s)
+  MkShapeCSG : (IsShape t, IsCSG t) => {s : t} -> ShapeCSG (MkShape s)
 
 
 data Union : Type where
-  MkUnion : (IsShape s1, IsCSG s1, IsShape s2, IsCSG s2) => (t1, t2 : Transformation) -> s1 -> s2 -> Union
+  MkUnion : (IsShape s1, IsCSG s1, IsShape s2, IsCSG s2) => s1 -> s2 -> Union
+
+
+hitUnionInside : (IsShape t1, IsCSG t1, IsShape t2, IsCSG t2) => t1 -> t2 -> Ray -> Double -> Maybe Hit
+hitUnionInside s1 s2 r d = 
+  case hit s1 r of
+    Nothing => Nothing
+    Just h1 => 
+      let ip = march r (distance h1) in
+      if inside s2 ip then
+        hitUnionInside s2 s1 (record {origin = ip} r) (d + distance h1)
+      else Just (record {distance = distance h1 + d} h1)
+
+hitUnionInsideBefore : (IsShape t1, IsCSG t1, IsShape t2, IsCSG t2) => t1 -> t2 -> Ray -> Double -> Double -> Maybe Double
+hitUnionInsideBefore s1 s2 r dCur dBound = 
+ case hitBefore s1 r (dBound - dCur) of
+    Nothing => Nothing
+    Just d' => 
+      let ip = march r d' in
+      if inside s2 ip then
+        hitUnionInsideBefore s2 s1 (record {origin = ip} r) (dCur + d') dBound
+      else Just (dCur + d')
+
 
 IsShape Union where
-  hit (MkUnion t1 t2 s1 s2) r = 
-    case hitTransformed t1 s1 r of
-      Nothing => hitTransformed t2 s2 r
-      res @ (Just h1) => 
-        case hitTransformed t2 s2 r of
-          Nothing => res
-          Just h2 => 
-            let (h1',h2') = if distance h1 < distance h2 then (h1, h2) else (h2, h1)
-                ip = march r (distance h1') in
-            ?IsShape_rhs_1
-  shadowHit x r = ?IsShape_rhs_2
+  hit (MkUnion s1 s2) r@(MkRay ori dir) = 
+    if inside s1 ori then
+      hitUnionInside s1 s2 r 0
+    else if inside s2 ori then
+      hitUnionInside s2 s1 r 0
+    else
+      case hit s1 r of
+        Nothing => hit s2 r
+        res1@(Just h1) => 
+          case hit s2 r of
+            Nothing => res1
+            res2@(Just h2) => 
+              if abs (distance h1 - distance h2) < 0.00001 then
+                Just (record {distance = min (distance h1) (distance h2)} h1)
+              else if distance h1 <= distance h2 then res1 else res2
+  
+  hitBefore (MkUnion s1 s2) r@(MkRay ori dir) dBound = 
+    if inside s1 ori then
+      hitUnionInsideBefore s1 s2 r 0 dBound
+    else if inside s2 ori then
+      hitUnionInsideBefore s2 s1 r 0 dBound
+    else
+      case hitBefore s1 r dBound of
+        res1 @(Just d1) => 
+          case hitBefore s2 r dBound of
+            (Just d2) => Just (min d1 d2)
+            Nothing => res1
+        Nothing => hitBefore s2 r dBound
 
 IsCSG Union where
-  inside (MkUnion t1 t2 s1 s2) p = insideTransformed t1 s1 p || insideTransformed t2 s2 p
+  inside (MkUnion s1 s2) p = inside s1 p || inside s2 p
 
 
 union : (s1, s2 : Shape) -> {auto c1 : ShapeCSG s1} -> {auto c2 : ShapeCSG s2} -> Shape
-union (MkShape m s) (MkShape m' s') {c1 = MkShapeCSG} {c2 = MkShapeCSG} = MkShape identity (MkUnion m m' s s')  
+union (MkShape s) (MkShape s') {c1 = MkShapeCSG} {c2 = MkShapeCSG} = MkShape (MkUnion s s')  
   
 namespace Shape
   hit : Shape -> Ray -> Maybe Hit
-  hit (MkShape tr s) r = hitTransformed tr s r
+  hit (MkShape s) r = hit s r
   
-  shadowHit : Shape -> Ray -> Bool
-  shadowHit (MkShape tr s) r = shadowHitTransformed tr s r
+  hitBefore : Shape -> Ray -> Double -> Maybe Double
+  hitBefore (MkShape s) = hitBefore s
+
+  transform : Transformation -> Shape -> Shape
+  transform tr (MkShape s) = 
+    case transformedShape s of
+      NoTrans => MkShape (MkTransformedShape tr s)
+      Trans tr' s => MkShape (MkTransformedShape (merge tr' tr) s)
   
       
 mkShape : IsShape s => s -> Shape
-mkShape s = MkShape identity s
+mkShape s = MkShape s
 
 record Sphere where
   constructor MkSphere
@@ -133,12 +189,12 @@ IsShape Sphere where
             in Just (MkHit t mat ip)
             
 
-  shadowHit (MkSphere tex) (MkRay origin dir) = 
+  hitBefore (MkSphere tex) (MkRay origin dir) dBound = 
     let a = dir `dot` dir
         b = 2.0 * (origin `dot` dir) - 1
         c = origin `dot` origin
-    in solve2ndD' False id (const True) just a b c
-    where just t = t < 1
+    in solve2ndD' Nothing id (const True) just a b c
+    where just t = if (t < dBound) then Just t else Nothing
     
     
 IsCSG Sphere where
@@ -146,7 +202,7 @@ IsCSG Sphere where
             
 mkSphere : (centre : Point) -> (radius : Double) -> (texture : Texture) -> Shape
 mkSphere centre radius texture = 
-  MkShape (merge (scale radius radius radius) (translateByVector centre)) 
+  MkShape $ MkTransformedShape (merge (scale radius radius radius) (translateByVector centre)) 
           (MkSphere texture)
 
 record Cylinder where
@@ -173,18 +229,19 @@ IsShape Cylinder where
                           in tex u ((y ip + 1)/2)
             in Just (MkHit d mat (MkVector (x ip) 0 (z ip)))
 
-  shadowHit (MkCylinder tex) ray@(MkRay origin dir) = 
+  hitBefore (MkCylinder tex) ray@(MkRay origin dir) dBound = 
     let a = x dir * x dir + z dir * z dir
         b = 2.0 * (x origin * x dir + z origin * z dir)
         c = (x origin * x origin + z origin * z origin) - 1.0
-    in solve2ndD' False id check (const True) a b c
+    in solve2ndD' Nothing id check (Just) a b c
     where check d = 
-            if d >= 1 then False
+            if d >= dBound then False
             else
               let ip = origin + (d `scale` dir) in
               y ip <= 1 && y ip >= -1
 
 mkCylinder : (centre : Point) -> (radius, height : Double) ->(tex : Texture) -> Shape
 mkCylinder centre radius height tex = 
-  MkShape (merge (scale radius (height / 2) radius) (translateByVector centre))
+  MkShape $ MkTransformedShape
+   (merge (scale radius (height / 2) radius) (translateByVector centre))
           (MkCylinder tex)

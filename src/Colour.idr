@@ -47,6 +47,9 @@ Cast Colour RGB where
 black : Colour
 black = MkColour 0 0 0
 
+yellow : Colour
+yellow = MkColour 1 1 0
+
 white : Colour
 white = MkColour 1 1 1
 
@@ -55,3 +58,6 @@ red = MkColour 1 0 0
 
 green : Colour
 green = MkColour 0 0.25 0
+
+blue : Colour
+blue = MkColour 0 0 0.25

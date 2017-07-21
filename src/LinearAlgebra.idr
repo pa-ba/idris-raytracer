@@ -106,10 +106,10 @@ transformVector (MkMatrix xx yx zx ox xy yy zy oy xz yz zz oz) (MkVector x y z) 
     
 transformNormal : Matrix -> Vector -> Vector
 transformNormal (MkMatrix xx yx zx ox xy yy zy oy xz yz zz oz) (MkVector x y z) = 
-  MkVector 
+  normalise (MkVector 
     (xx * x + xy * y + xz * z)
     (yx * x + yy * y + yz * z)
-    (zx * x + zy * y + zz * z)
+    (zx * x + zy * y + zz * z))
 
 transformRay : Matrix -> Ray -> Ray
 transformRay m (MkRay origin direction) = MkRay (transformPoint m origin) (transformVector m direction)
