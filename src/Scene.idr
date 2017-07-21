@@ -1,4 +1,4 @@
-module World
+module Scene
 
 import Shapes
 import LinearAlgebra as L
