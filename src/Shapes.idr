@@ -21,10 +21,27 @@ interface IsShape s where
     case hit s r of
       Just (MkHit distance _ _) => distance <= 1.0
       Nothing => False
+  inside : Maybe (s -> Point -> Bool)
+  inside = Nothing
+
+--interface IsCSG s where
+--  inside : s -> Point -> Bool
 
 data Shape : Type where
   MkShape : Maybe Transformation -> (IsShape s => s -> Shape)
   
+
+  
+--data ShapeCSG : Shape -> Type where
+--  MkShapeCSG : {m : Maybe Transformation} -> ((IsShape t, IsCSG t) => {s : t} -> ShapeCSG (MkShape m s))
+
+
+  
+-- canCSG : Shape -> Bool
+-- canCSG (MkShape {s=sType} _ s) = isJust (isInside {s = sType})
+
+--union : (s1, s2 : Shape) -> {auto c1 : ShapeCSG s1} -> {auto c2 : ShapeCSG s2} -> Shape
+--union (MkShape m s) (MkShape m' s') {c1 = MkShapeCSG} {c2 = MkShapeCSG} = ?union_rhs_1
 
 transform : Transformation -> Shape -> Shape
 transform tr (MkShape Nothign sh) = MkShape (Just tr) sh
@@ -43,7 +60,20 @@ namespace Shape
   shadowHit (MkShape Nothing s) r = shadowHit s r
   shadowHit (MkShape (Just tr) s) r = shadowHit s (transformRay (inverse tr) r)
 
+  inside : Shape -> Maybe (Point -> Bool)
+  inside (MkShape {s} t sh) = 
+    case inside {s=s} of
+      Nothing => Nothing
+      Just f => Just (f sh)
   
+data ShapeCSG : Shape -> Type where
+  MkShapeCSG :  {auto prf : inside s = Just fun} -> ShapeCSG s
+
+union : (s1, s2 : Shape) -> {auto c1 : ShapeCSG s1} -> {auto c2 : ShapeCSG s2} -> Shape
+union s1 s2 {c1 = MkShapeCSG {fun = f1}} {c2 = MkShapeCSG {fun = f2}} = ?union_rhs_2
+
+  
+      
 mkShape : IsShape s => s -> Shape
 mkShape s = MkShape Nothing s
 
@@ -101,6 +131,12 @@ IsShape Sphere where
         c = origin `dot` origin
     in solve2ndD' False id (const True) just a b c
     where just t = t < 1
+    
+  inside = Just fun
+    where fun (MkSphere _) (MkVector x y z) = x * x + y * y + z * z < 1
+    
+--IsCSG Sphere where
+--  inside (MkSphere _) (MkVector x y z) = x * x + y * y + z * z < 1
             
 mkSphere : (centre : Point) -> (radius : Double) -> (texture : Texture) -> Shape
 mkSphere centre radius texture = 

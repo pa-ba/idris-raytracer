@@ -22,6 +22,7 @@ renderSphere =
   let light = MkLight (mkPoint 0.0 0.0 4.0) (MkColour 1 1 1)
       ambientLight = MkAmbient (MkColour 0.1 0.1 0.1)
       sphere = mkSphere (mkPoint 0 0 0) 1.0 (MkConstTexture (MkMaterial (MkColour 0 0 1) 0.0))
+      csg = Shapes.union sphere sphere
       camera = MkCamera (mkPoint 0.0 0.0 4.0) (mkPoint 0.0 0.0 0.0) (MkVector 0.0 1.0 0.0) 1.0 2.0 2.0 500 500
       scene = MkScene [sphere] [light] ambientLight 0
   in render "sphere.ppm" scene camera
