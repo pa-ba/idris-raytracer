@@ -1,11 +1,6 @@
 module Examples.Texture
 
 import Scene
-import LinearAlgebra
-import Light
-import Shapes
-import Colour
-import Transformation
 
 %access export
 

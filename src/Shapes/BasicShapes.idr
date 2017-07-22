@@ -1,10 +1,10 @@
 module Shapes.BasicShapes
 
-import Shapes.Base
-import Shapes.CSG
-import LinearAlgebra
-import Colour
-import Transformation
+import public Shapes.Base
+import public Shapes.CSG
+import public LinearAlgebra
+import public Colour
+import public Transformation
 
 %access public export
 record Sphere where

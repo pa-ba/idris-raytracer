@@ -1,11 +1,6 @@
 module Examples.Shapes
 
 import Scene
-import LinearAlgebra
-import Light
-import Shapes
-import Colour
-import Transformation
 
 %access export 
 
@@ -16,7 +11,7 @@ renderHollowCylinder =
         cylinder = mkCylinder (mkPoint 0 0 0) 2.0 1.0 (MkConstTexture (MkMaterial (MkColour 1 1 0) 0.0))
         camera = MkCamera (mkPoint 0.0 10.0 20.0) (mkPoint 0.0 0.0 0.0) (MkVector 0.0 1.0 (-0.5)) 18.0 4.0 4.0 500 500
         scene = MkScene [cylinder] [light] ambientLight 0
-    in render "hollow cylinder.ppm" scene camera
+    in render "hollowCylinder.ppm" scene camera
 
 renderSphere : IO ()
 renderSphere = 
@@ -35,5 +30,5 @@ renderReflectiveSpheres =
       sphere2 = mkSphere (mkPoint 0.8 0.0 0.0) 0.7 (MkConstTexture (MkMaterial (MkColour 1 0 0) 0.7))
       camera = MkCamera (mkPoint 0.0 0.0 2.0) (mkPoint 0.0 0.0 0.0) (MkVector 0.0 1.0 0.0) 1.0 2.0 2.0 500 500;
       scene = MkScene [sphere,sphere2] [light] ambientLight 4
-  in render "reflective spheres.ppm" scene camera
+  in render "reflectiveSpheres.ppm" scene camera
 

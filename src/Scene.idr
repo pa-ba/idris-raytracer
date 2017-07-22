@@ -1,9 +1,7 @@
 module Scene
 
-import Shapes
-import LinearAlgebra as L
-import Light
-import Colour
+import public Shapes
+import public Light
 import PPM
 
 
@@ -51,7 +49,7 @@ traceShadowRays shapes ls (MkAmbient acol) p n = run acol ls
   where run : Colour -> List Light -> Colour
         run acc [] = acc
         run acc ((MkLight location lcol) :: xs) = 
-          let d = L.direction p location
+          let d = direction p location
               m = magnitude d
               nd = d / m -- normalise d
               r = MkRay p nd in
@@ -66,9 +64,9 @@ render fileName (MkScene shapes lights ambient maxRefl)
   (MkCamera location lookat up zoom width height pixelWidth pixelHeight) =
     writePPM fileName pixelWidth pixelHeight tracePixel
   where w : Vector
-        w = L.normalise (L.direction lookat location)
+        w = normalise (direction lookat location)
         u : Vector
-        u = L.normalise  (up `cross` w)
+        u = normalise  (up `cross` w)
         v : Vector
         v = w `cross` u
         resWidth : Double

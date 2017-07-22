@@ -1,11 +1,7 @@
 module Examples.CSG
 
 import Scene
-import LinearAlgebra
-import Light
-import Shapes
-import Colour
-import Transformation
+
 
 l1 : Light
 l1 = MkLight (mkPoint 4.0 0.0 4.0) Colour.white

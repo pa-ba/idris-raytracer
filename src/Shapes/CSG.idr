@@ -1,9 +1,9 @@
 module Shapes.CSG
 
-import Shapes.Base
-import LinearAlgebra
-import Colour
-import Transformation
+import public Shapes.Base
+import public LinearAlgebra
+import public Colour
+import public Transformation
 
 %access public export
 interface IsCSG s where
