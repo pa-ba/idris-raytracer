@@ -61,3 +61,12 @@ green = MkColour 0 0.25 0
 
 blue : Colour
 blue = MkColour 0 0 0.25
+
+magenta : Colour
+magenta = MkColour 1 0 1
+
+cyan : Colour
+cyan = MkColour 0 1 1
+
+orange : Colour
+orange = MkColour 0.42 1 1

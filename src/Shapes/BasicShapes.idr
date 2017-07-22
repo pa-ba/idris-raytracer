@@ -111,3 +111,40 @@ mkCylinder centre radius height tex =
   MkShape $ MkTransformedShape
    (merge (scale radius (height / 2) radius) (translateByVector centre))
           (MkCylinder tex)
+
+record Disc where
+  constructor MkDisc
+  texture : Texture
+
+private
+%inline
+sq : Double -> Double
+sq d = d * d
+
+private
+%inline
+discHit : (just : Point -> Double -> a) -> (nothing : a) -> (ray : Ray) -> a
+discHit just nothing ray@(MkRay ori dir) =
+  if z dir == 0.0 then nothing
+  else 
+    let d = (negate (z ori))/z dir in
+    if d > 0.0 then
+      let ip = march ray d in
+      if sq (x ip) + sq(y ip) <= 1 then just ip d
+      else nothing
+    else nothing
+  
+
+IsShape Disc where
+  hit (MkDisc tex) = discHit just Nothing
+    where just ip d = 
+            let mat = case tex of
+                        MkConstTexture m => m
+                        MkTexture t => t ((x ip + 1)/ 2) ((y ip + 1) / 2)
+            in Just (MkHit d mat (MkVector 0 0 1))
+  hitBefore (MkDisc _) ray dBound = discHit just Nothing ray
+    where just ip d = if d < dBound then Just d else Nothing
+    
+mkDisc : Point -> (radius : Double) -> Texture -> Shape
+mkDisc centre radius tex = 
+  mkShape $ MkTransformedShape (merge (scale radius radius 1.0) (translateByVector centre))  $ MkDisc tex
