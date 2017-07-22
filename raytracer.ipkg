@@ -1,0 +1,8 @@
+package raytracer
+
+executable = raytracer
+
+main = Main
+
+sourcedir = src
+
