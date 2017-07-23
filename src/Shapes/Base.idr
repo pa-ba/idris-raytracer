@@ -1,3 +1,4 @@
+||| This module collects all basic definitions for defining shapes
 module Shapes.Base
 
 import public LinearAlgebra
@@ -6,6 +7,8 @@ import public Transformation
 
 %access public export
 
+||| This type collects the data that we need in case of a ray
+||| intersection with a shape.
 record Hit where
   constructor MkHit
   distance : Double
@@ -62,6 +65,6 @@ namespace Shape
       NoTrans => MkShape (MkTransformedShape tr s)
       Trans tr' s => MkShape (MkTransformedShape (merge tr' tr) s)
   
-      
+||| Construct a shape.    
 mkShape : IsShape s => s -> Shape
 mkShape s = MkShape s

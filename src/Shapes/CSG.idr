@@ -1,3 +1,7 @@
+||| Constructive solid geometry. This module allows solid shapes to be
+||| composed with Boolean operators like 'union', 'intersection', and
+||| 'subtraction'.
+
 module Shapes.CSG
 
 import public Shapes.Base
@@ -5,24 +9,33 @@ import public LinearAlgebra
 import public Colour
 import public Transformation
 
-%access public export
-interface IsCSG s where
+%access export
+
+||| This interface is supposed to be implemented by solid shapes
+||| (making them eligible for CSG).
+export
+interface IsSolid s where
   inside : s -> Point -> Bool
 
-
-IsCSG s => IsCSG (TransformedShape s) where
+||| Transformations preserve solidness.
+export
+IsSolid s => IsSolid (TransformedShape s) where
   inside (MkTransformedShape t s) p = inside s (inverseTransformPoint t p)
 
+||| Inhabitants of this type are evidence that a given type is solid.
+public export
+data SolidShape : Shape -> Type where
+  MkSolidShape : (IsShape t, IsSolid t) => {s : t} -> SolidShape (MkShape s)
 
-data ShapeCSG : Shape -> Type where
-  MkShapeCSG : (IsShape t, IsCSG t) => {s : t} -> ShapeCSG (MkShape s)
 
-
+||| Type representing the union of two shapes.
+export
 data Union : Type where
-  MkUnion : (IsShape s1, IsCSG s1, IsShape s2, IsCSG s2) => s1 -> s2 -> Union
+  MkUnion : (IsShape s1, IsSolid s1, IsShape s2, IsSolid s2) => s1 -> s2 -> Union
 
-
-hitUnionInside : (IsShape t1, IsCSG t1, IsShape t2, IsCSG t2) => t1 -> t2 -> Ray -> Double -> Maybe Hit
+||| Helper function for the hit function of 'union'
+private
+hitUnionInside : (IsShape t1, IsSolid t1, IsShape t2, IsSolid t2) => t1 -> t2 -> Ray -> Double -> Maybe Hit
 hitUnionInside s1 s2 r d = 
   case hit s1 r of
     Nothing => Nothing
@@ -32,17 +45,20 @@ hitUnionInside s1 s2 r d =
         hitUnionInside s2 s1 (record {origin = ip} r) (d + distance h1)
       else Just (record {distance = distance h1 + d} h1)
 
-hitUnionInsideBefore : (IsShape t1, IsCSG t1, IsShape t2, IsCSG t2) => t1 -> t2 -> Ray -> Double -> Double -> Maybe Double
+||| Helper function for the 'inside' function of 'union'.
+private
+hitUnionInsideBefore : (IsShape t1, IsSolid t1, IsShape t2, IsSolid t2) 
+  => t1 -> t2 -> Ray -> Double -> Double -> Maybe Double
 hitUnionInsideBefore s1 s2 r dCur dBound = 
  case hitBefore s1 r (dBound - dCur) of
     Nothing => Nothing
     Just d' => 
       let ip = march r d' in
       if inside s2 ip then
-        hitUnionInsideBefore s2 s1 (record {origin = ip} r) (dCur + d') dBound
+         hitUnionInsideBefore s2 s1 (record {origin = ip} r) (dCur + d') dBound
       else Just (dCur + d')
 
-
+export
 IsShape Union where
   hit (MkUnion s1 s2) r@(MkRay ori dir) = 
     if inside s1 ori then
@@ -73,9 +89,14 @@ IsShape Union where
             Nothing => res1
         Nothing => hitBefore s2 r dBound
 
-IsCSG Union where
+export
+IsSolid Union where
   inside (MkUnion s1 s2) p = inside s1 p || inside s2 p
 
 
-union : (s1, s2 : Shape) -> {auto c1 : ShapeCSG s1} -> {auto c2 : ShapeCSG s2} -> Shape
-union (MkShape s) (MkShape s') {c1 = MkShapeCSG} {c2 = MkShapeCSG} = MkShape (MkUnion s s')  
+||| This function constructs the union of two solid shapes.
+export
+union : (s1, s2 : Shape) -> {auto c1 : SolidShape s1} -> {auto c2 : SolidShape s2} -> Shape
+union (MkShape s) (MkShape s') {c1 = MkSolidShape} {c2 = MkSolidShape} = MkShape (MkUnion s s')  
+
+

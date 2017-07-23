@@ -1,3 +1,5 @@
+||| This module implements basic shapes like spheres, cylinders etc.
+
 module Shapes.BasicShapes
 
 import public Shapes.Base
@@ -11,7 +13,11 @@ record Sphere where
   constructor MkSphere
   texture : Texture
 
+
+
+||| Helper function to solve 2nd degree polynomials
 %inline
+private
 solve2ndD' : (nothing : t) -> (comp : Double -> i) -> (check : i -> Bool) -> (just : i -> t) -> (a, b, c : Double) -> t
 solve2ndD' nothing comp check just a b c = 
     let disc = b * b - 4.0 * a * c in
@@ -29,10 +35,15 @@ solve2ndD' nothing comp check just a b c =
         if t2 > 0.0 && check r2 then
           just r2
         else nothing
-
+        
+||| This function finds the smallest positive solution (if any) of the
+||| polynomial 'a x^2 + b x + c = 0'. If there is no solution
+||| `Nothing` is returned.
+private
 solve2ndD : (a, b, c : Double) -> Maybe Double
 solve2ndD =  solve2ndD' Nothing id (const True) Just
 
+private
 twoPi : Double
 twoPi = 2 * Doubles.pi
 
@@ -62,8 +73,8 @@ IsShape Sphere where
     in solve2ndD' Nothing id (const True) just a b c
     where just t = if (t < dBound) then Just t else Nothing
     
-    
-IsCSG Sphere where
+export
+IsSolid Sphere where
   inside (MkSphere _) (MkVector x y z) = x * x + y * y + z * z < 1
             
 mkSphere : (centre : Point) -> (radius : Double) -> (texture : Texture) -> Shape
@@ -71,6 +82,8 @@ mkSphere centre radius texture =
   MkShape $ MkTransformedShape (merge (scale radius radius radius) (translateByVector centre)) 
           (MkSphere texture)
 
+||| Type representing a hollow cylinder.
+export
 record Cylinder where
   constructor MkCylinder
   texture : Texture
@@ -106,21 +119,27 @@ IsShape Cylinder where
               let ip = origin + (d `scale` dir) in
               y ip <= 1 && y ip >= -1
 
+
+||| Construct a hollow cylinder.
 mkCylinder : (centre : Point) -> (radius, height : Double) ->(tex : Texture) -> Shape
 mkCylinder centre radius height tex = 
   MkShape $ MkTransformedShape
    (merge (scale radius (height / 2) radius) (translateByVector centre))
           (MkCylinder tex)
 
+||| Type representing a flat disc.
+export
 record Disc where
   constructor MkDisc
   texture : Texture
 
+||| Compute the square.
 private
 %inline
 sq : Double -> Double
 sq d = d * d
 
+||| Helper function for implementing the hit function for the disc.
 private
 %inline
 discHit : (just : Point -> Double -> a) -> (nothing : a) -> (ray : Ray) -> a
@@ -144,7 +163,9 @@ IsShape Disc where
             in Just (MkHit d mat (MkVector 0 0 1))
   hitBefore (MkDisc _) ray dBound = discHit just Nothing ray
     where just ip d = if d < dBound then Just d else Nothing
-    
+
+
+||| Construct a flat disc.
 mkDisc : Point -> (radius : Double) -> Texture -> Shape
 mkDisc centre radius tex = 
   mkShape $ MkTransformedShape (merge (scale radius radius 1.0) (translateByVector centre))  $ MkDisc tex
