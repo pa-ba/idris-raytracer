@@ -169,3 +169,58 @@ IsShape Disc where
 mkDisc : Point -> (radius : Double) -> Texture -> Shape
 mkDisc centre radius tex = 
   mkShape $ MkTransformedShape (merge (scale radius radius 1.0) (translateByVector centre))  $ MkDisc tex
+
+
+export
+record SolidCylinder where
+  constructor MkSolidCylinder
+  shapes : Group
+  
+IsShape SolidCylinder where
+  hit (MkSolidCylinder gr) ray = hit gr ray
+  hitBefore (MkSolidCylinder gr) ray = hitBefore gr ray
+
+
+||| Helper function for implementing the hit function for the disc.
+private
+%inline
+cylinderDiscHit : (offset : Double) ->(just : Point -> Double -> a) -> (nothing : a) -> (ray : Ray) -> a
+cylinderDiscHit offset just nothing ray@(MkRay ori dir) =
+  if y dir == 0.0 then nothing
+  else 
+    let d = (offset - (y ori))/y dir in
+    if d > 0.0 then
+      let ip = march ray d in
+      if sq (x ip) + sq(z ip) <= 1 then just ip d
+      else nothing
+    else nothing
+
+
+record CylinderDisc where
+  constructor MkCylinderDisc
+  offset : Double
+  texture : Texture
+
+
+IsShape CylinderDisc where
+  hit (MkCylinderDisc off tex) = cylinderDiscHit off just Nothing
+    where just ip d = 
+            let mat = case tex of
+                        MkConstTexture m => m
+                        MkTexture t => t ((x ip + 1)/ 2) ((z ip + 1) / 2)
+            in Just (MkHit d mat (MkVector 0 1 0))
+  hitBefore (MkCylinderDisc off _) ray dBound = cylinderDiscHit off just Nothing ray
+    where just ip d = if d < dBound then Just d else Nothing
+    
+IsSolid SolidCylinder where
+  inside (MkSolidCylinder _) (MkVector x y z) = 
+    (-1) < y && y < 1 && sq x + sq y < 1
+  
+mkSolidCylinder : (centre : Point) -> (radius, height : Double) -> (cyl, top, bot : Texture) -> Shape
+mkSolidCylinder centre radius height cylTex topTex botTex = 
+  let cyl = MkShape (MkCylinder cylTex)
+      top = MkShape (MkCylinderDisc 1 topTex)
+      bot = MkShape (MkCylinderDisc (-1) botTex) in
+  MkShape $ MkTransformedShape
+   (merge (scale radius (height / 2) radius) (translateByVector centre))
+          (MkSolidCylinder $ MkGroup [cyl,top,bot])

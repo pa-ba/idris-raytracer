@@ -14,7 +14,7 @@ record Hit where
   distance : Double
   material : Material
   normal : Vector
-  
+      
 %name Hit h
 
 mutual
@@ -68,3 +68,22 @@ namespace Shape
 ||| Construct a shape.    
 mkShape : IsShape s => s -> Shape
 mkShape s = MkShape s
+
+
+total
+export
+closestHit : Maybe Hit -> Maybe Hit -> Maybe Hit
+closestHit Nothing y = y
+closestHit x Nothing = x
+closestHit h1@(Just (MkHit d1 _ _)) h2@(Just (MkHit d2 _ _)) = 
+  if d1 < d2 then h1 else h2
+
+
+total
+export
+findClosestHit : List Shape -> Ray -> Maybe Hit
+findClosestHit shapes ray = run Nothing shapes
+  where run : Maybe Hit -> List Shape -> Maybe Hit
+        run h [] = h
+        run h (x :: xs) = 
+          run (h `closestHit` hit x ray) xs

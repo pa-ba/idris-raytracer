@@ -39,6 +39,18 @@ sphere3 : Shape
 sphere3 = mkSphere (mkPoint (-0.5) 0.0 0.0) 0.2 (MkConstTexture (MkMaterial (Colour.yellow) 0.0))
 
 
+mkUnitCylinder : Texture -> Shape
+mkUnitCylinder t = mkSolidCylinder (mkPoint 0.0 0.0 0.0) 1.0 2.0 t t t
+
+
+-- TODO: does not type check
+-- cross : Shape
+-- cross =
+--   let cy = transform (scale 0.7 1.5 0.7) (mkUnitCylinder (MkConstTexture $ MkMaterial yellow 0.0))
+--       cx = transform (rotateX (pi/2)) cy 
+--       cz = transform (rotateZ (pi/2)) cy 
+--   in union cy (union cz cx)
+
 %access export
 
 renderUnion : IO ()

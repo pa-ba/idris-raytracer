@@ -23,22 +23,6 @@ record Scene where
   maxReflect : Nat
 
 total
-closestHit : Maybe Hit -> Maybe Hit -> Maybe Hit
-closestHit Nothing y = y
-closestHit x Nothing = x
-closestHit h1@(Just (MkHit d1 _ _)) h2@(Just (MkHit d2 _ _)) = 
-  if d1 < d2 then h1 else h2
-
-
-total
-findClosestHit : List Shape -> Ray -> Maybe Hit
-findClosestHit shapes ray = run Nothing shapes
-  where run : Maybe Hit -> List Shape -> Maybe Hit
-        run h [] = h
-        run h (x :: xs) = 
-          run (h `closestHit` hit x ray) xs
-
-total
 findShadowHit : List Shape -> Ray -> Double -> Bool
 findShadowHit [] r d = False
 findShadowHit (x :: xs) r d = isJust (hitBefore x r d) || findShadowHit xs r d

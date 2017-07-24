@@ -7,9 +7,11 @@ import Examples.Texture
 
 main : IO ()
 main = do
-  renderDiscs
+  renderSolidCylinder
+  -- renderDiscs
   -- renderReflectiveSpheres
   -- renderHollowCylinder
   -- renderSphere
   -- renderTexSphere
   -- renderUnion
+  

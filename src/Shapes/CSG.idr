@@ -29,7 +29,7 @@ data SolidShape : Shape -> Type where
 
 
 ||| Type representing the union of two shapes.
-export
+public export
 data Union : Type where
   MkUnion : (IsShape s1, IsSolid s1, IsShape s2, IsSolid s2) => s1 -> s2 -> Union
 
@@ -58,7 +58,7 @@ hitUnionInsideBefore s1 s2 r dCur dBound =
          hitUnionInsideBefore s2 s1 (record {origin = ip} r) (dCur + d') dBound
       else Just (dCur + d')
 
-export
+public export
 IsShape Union where
   hit (MkUnion s1 s2) r@(MkRay ori dir) = 
     if inside s1 ori then
@@ -89,14 +89,31 @@ IsShape Union where
             Nothing => res1
         Nothing => hitBefore s2 r dBound
 
-export
+public export
 IsSolid Union where
   inside (MkUnion s1 s2) p = inside s1 p || inside s2 p
 
 
 ||| This function constructs the union of two solid shapes.
-export
+public export
 union : (s1, s2 : Shape) -> {auto c1 : SolidShape s1} -> {auto c2 : SolidShape s2} -> Shape
 union (MkShape s) (MkShape s') {c1 = MkSolidShape} {c2 = MkSolidShape} = MkShape (MkUnion s s')  
 
 
+record Group where
+  constructor MkGroup
+  shapes : List Shape
+  
+IsShape Group where
+  hit (MkGroup shs) ray = findClosestHit shs ray
+  hitBefore (MkGroup shs) ray dbound = run shs
+    where run [] = Nothing
+          run (sh :: shs') = 
+            case hitBefore sh ray dbound of
+              Nothing => run shs'
+              h => h
+  
+
+export
+group : List Shape -> Shape
+group = mkShape . MkGroup
