@@ -1,7 +1,7 @@
 module LinearAlgebra
 
 %access public export
-
+%default total
 
 record Vector where
   constructor MkVector
@@ -47,7 +47,6 @@ magnitude (MkVector x y z) = sqrt (x * x + y * y + z * z)
 
 normalise : Vector -> Vector
 normalise v = v / magnitude v
-
 
 
 Point : Type

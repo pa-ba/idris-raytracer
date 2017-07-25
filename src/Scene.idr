@@ -4,8 +4,9 @@ import public Shapes
 import public Light
 import PPM
 
+%access export
+%default total
 
-%access public export
 
 record Camera where
   constructor MkCamera
@@ -17,18 +18,18 @@ record Camera where
 
 record Scene where
   constructor MkScene
-  shapes : List Shape
+  shapes : ShapeList
   lights : List Light
   ambient : Ambient
   maxReflect : Nat
 
 total
-findShadowHit : List Shape -> Ray -> Double -> Bool
+findShadowHit : ShapeList -> Ray -> Double -> Bool
 findShadowHit [] r d = False
-findShadowHit (x :: xs) r d = isJust (hitBefore x r d) || findShadowHit xs r d
+findShadowHit (x :: xs) r d = isJust (hitShapeBefore x r d) || findShadowHit xs r d
 
 
-traceShadowRays : List Shape -> List Light -> Ambient -> Point -> Vector -> Colour
+traceShadowRays : ShapeList -> List Light -> Ambient -> Point -> Vector -> Colour
 traceShadowRays shapes ls (MkAmbient acol) p n = run acol ls
   where run : Colour -> List Light -> Colour
         run acc [] = acc
@@ -43,6 +44,7 @@ traceShadowRays shapes ls (MkAmbient acol) p n = run acol ls
            let cos = dot n nd in
            if cos > 0.00001 then run (acc + (cos `scale` lcol)) xs else run acc xs
 
+partial
 render : (fileName : String) -> Scene -> Camera -> IO ()
 render fileName (MkScene shapes lights ambient maxRefl) 
   (MkCamera location lookat up zoom width height pixelWidth pixelHeight) =

@@ -3,7 +3,8 @@ module Light
 import Colour
 import LinearAlgebra
 
-%access public export
+%access export
+%default total
 
 record Ambient where
   constructor MkAmbient

@@ -5,6 +5,8 @@ import Data.Buffer
 import System
 import System.Concurrency.Channels
 
+%default total
+
 
 %inline
 floatToByte : Double -> Bits8
@@ -14,10 +16,12 @@ parallel : Nat
 parallel = 12
 
 private
+partial
 writeLines : (buf : Buffer) -> (width, height : Nat) -> (render : (x, y : Nat) -> Colour) -> IO ()
 writeLines buf width@(S width') height@(S height') render = 
   do run' [] 0 height'
-  where chunkSize : Nat
+  where partial
+        chunkSize : Nat
         chunkSize = (S height') `div` parallel
         run : Int -> Nat -> Nat -> Nat -> Nat -> IO ()
         run _ _ _ _  Z = pure ()
@@ -38,6 +42,7 @@ writeLines buf width@(S width') height@(S height') render =
         waitForChildren (s :: ss) = do
           unsafeRecv () s
           waitForChildren ss
+        partial
         run' : List Channel -> Int -> Nat -> IO ()
         run' ss loc y = 
           if y < chunkSize then do
@@ -57,6 +62,7 @@ writeLines buf width@(S width') height@(S height') render =
 writeLines _ _ _ _ = pure ()
 
 export
+partial
 writePPM : (fileName : String) -> (width, height : Nat) -> (render : (x, y : Nat) -> Colour) -> IO ()
 writePPM fileName width height render = do
   Right file <- openFile fileName WriteTruncate

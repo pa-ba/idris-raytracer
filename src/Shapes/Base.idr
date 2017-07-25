@@ -5,10 +5,12 @@ import public LinearAlgebra
 import public Colour
 import public Transformation
 
-%access public export
+%access export
+%default total
 
 ||| This type collects the data that we need in case of a ray
 ||| intersection with a shape.
+public export
 record Hit where
   constructor MkHit
   distance : Double
@@ -18,7 +20,8 @@ record Hit where
 %name Hit h
 
 mutual
-  interface IsShape s where
+  public export
+  interface Hitable s where
     hit : s -> Ray -> Maybe Hit
     hitBefore : s -> Ray -> Double -> Maybe Double
     hitBefore s r d = 
@@ -30,18 +33,20 @@ mutual
     
   data DecomposeTrans : Type where
     NotTrans : DecomposeTrans
-    Trans : IsShape s => Transformation -> s -> DecomposeTrans
+    Trans : Hitable s => Transformation -> s -> DecomposeTrans
     
   defaultTrans : DecomposeTrans
   defaultTrans = NotTrans
 
-  data Shape : Type where
-      MkShape : IsShape s => s -> Shape
+public export
+data Shape : Type where
+    MkShape : Hitable s => s -> Shape
 
-  data TransformedShape : Type -> Type where
-    MkTransformedShape : Transformation -> s -> TransformedShape s
+public export
+data TransformedShape : Type -> Type where
+  MkTransformedShape : Transformation -> s -> TransformedShape s
     
-IsShape s => IsShape (TransformedShape s) where
+Hitable s => Hitable (TransformedShape s) where
   hit (MkTransformedShape tr s) r =
    case hit s (inverseTransformRay tr r) of
       Nothing => Nothing
@@ -52,26 +57,29 @@ IsShape s => IsShape (TransformedShape s) where
       
   transformedShape (MkTransformedShape t s) = Trans t s
 
-namespace Shape
-  hit : Shape -> Ray -> Maybe Hit
-  hit (MkShape s) r = hit s r
+public export
+interface IsShape a where
+  hitShape : a -> Ray -> Maybe Hit
+  hitShapeBefore : a -> Ray -> Double -> Maybe Double
+  transform : Transformation -> a -> a
   
-  hitBefore : Shape -> Ray -> Double -> Maybe Double
-  hitBefore (MkShape s) = hitBefore s
 
-  transform : Transformation -> Shape -> Shape
+IsShape Shape where
+  hitShape (MkShape s) r = hit s r
+  
+  hitShapeBefore (MkShape s) = hitBefore s
+
   transform tr (MkShape s) = 
     case transformedShape s of
       NoTrans => MkShape (MkTransformedShape tr s)
       Trans tr' s => MkShape (MkTransformedShape (merge tr' tr) s)
   
 ||| Construct a shape.    
-mkShape : IsShape s => s -> Shape
+mkShape : Hitable s => s -> Shape
 mkShape s = MkShape s
 
 
 total
-export
 closestHit : Maybe Hit -> Maybe Hit -> Maybe Hit
 closestHit Nothing y = y
 closestHit x Nothing = x
@@ -79,11 +87,15 @@ closestHit h1@(Just (MkHit d1 _ _)) h2@(Just (MkHit d2 _ _)) =
   if d1 < d2 then h1 else h2
 
 
+public export
+data ShapeList : Type where
+  Nil : ShapeList
+  (::) : (IsShape s) => s -> ShapeList -> ShapeList
+
 total
-export
-findClosestHit : List Shape -> Ray -> Maybe Hit
+findClosestHit : ShapeList -> Ray -> Maybe Hit
 findClosestHit shapes ray = run Nothing shapes
-  where run : Maybe Hit -> List Shape -> Maybe Hit
+  where run : Maybe Hit -> ShapeList -> Maybe Hit
         run h [] = h
         run h (x :: xs) = 
-          run (h `closestHit` hit x ray) xs
+          run (h `closestHit` hitShape x ray) xs

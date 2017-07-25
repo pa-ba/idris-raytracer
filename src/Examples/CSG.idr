@@ -26,35 +26,35 @@ camera = MkCamera (mkPoint 16.0 16.0 16.0) (mkPoint 0.0 0.0 0.0) (MkVector (-1.0
 camera2 : Camera
 camera2 = MkCamera (mkPoint 0.0 0.0 4.0) (mkPoint 0.0 0.0 0.0) (MkVector 0.0 1.0 0.0) 2.0 2.0 2.0 500 500
 
-sphere : Shape
+sphere : SolidShape
 sphere = mkSphere (mkPoint 0.0 0.0 0.0) 1.3 (MkConstTexture (MkMaterial (Colour.blue) 0.0))
 
-sphere1 : Shape
+sphere1 : SolidShape
 sphere1 = mkSphere (mkPoint 0.5 0.0 0.0) 1.0 (MkConstTexture (MkMaterial (Colour.blue) 0.0))
 
-sphere2 : Shape
+sphere2 : SolidShape
 sphere2 = mkSphere (mkPoint (-0.5) 0.0 0.0) 1.0 (MkConstTexture (MkMaterial (Colour.red) 0.0))
 
-sphere3 : Shape
+sphere3 : SolidShape
 sphere3 = mkSphere (mkPoint (-0.5) 0.0 0.0) 0.2 (MkConstTexture (MkMaterial (Colour.yellow) 0.0))
 
 
-mkUnitCylinder : Texture -> Shape
+mkUnitCylinder : Texture -> SolidShape
 mkUnitCylinder t = mkSolidCylinder (mkPoint 0.0 0.0 0.0) 1.0 2.0 t t t
 
 
--- TODO: does not type check
--- cross : Shape
--- cross =
---   let cy = transform (scale 0.7 1.5 0.7) (mkUnitCylinder (MkConstTexture $ MkMaterial yellow 0.0))
---       cx = transform (rotateX (pi/2)) cy 
---       cz = transform (rotateZ (pi/2)) cy 
---   in union cy (union cz cx)
+
+cross : SolidShape
+cross =
+  let cy = transform (scale 0.7 1.5 0.7) (mkUnitCylinder (MkConstTexture $ MkMaterial yellow 0.0))
+      cx = transform (rotateX (pi/2)) cy 
+      cz = transform (rotateZ (pi/2)) cy 
+  in union cy (union cz cx)
 
 %access export
 
 renderUnion : IO ()
 renderUnion =
-  let scene = MkScene [union sphere1 sphere2] [l1, l2] (ambientLight) 0
+  let scene = MkScene [CSG.union sphere1 sphere2] [l1, l2] (ambientLight) 0
       camera = camera2
   in render "union.ppm" scene camera

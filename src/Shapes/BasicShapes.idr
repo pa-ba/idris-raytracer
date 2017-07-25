@@ -8,7 +8,10 @@ import public LinearAlgebra
 import public Colour
 import public Transformation
 
-%access public export
+%access export
+%default total
+
+
 record Sphere where
   constructor MkSphere
   texture : Texture
@@ -47,7 +50,7 @@ private
 twoPi : Double
 twoPi = 2 * Doubles.pi
 
-IsShape Sphere where
+Hitable Sphere where
   hit (MkSphere tex) (MkRay origin dir) = 
     let a = dir `dot` dir
         b = 2.0 * (origin `dot` dir)
@@ -73,23 +76,23 @@ IsShape Sphere where
     in solve2ndD' Nothing id (const True) just a b c
     where just t = if (t < dBound) then Just t else Nothing
     
-export
-IsSolid Sphere where
+Solid Sphere where
   inside (MkSphere _) (MkVector x y z) = x * x + y * y + z * z < 1
-            
-mkSphere : (centre : Point) -> (radius : Double) -> (texture : Texture) -> Shape
+      
+
+mkSphere : (centre : Point) -> (radius : Double) -> (texture : Texture) -> SolidShape
 mkSphere centre radius texture = 
-  MkShape $ MkTransformedShape (merge (scale radius radius radius) (translateByVector centre)) 
+  MkSolidShape $ MkTransformedShape (merge (scale radius radius radius) (translateByVector centre)) 
           (MkSphere texture)
 
 ||| Type representing a hollow cylinder.
-export
+
 record Cylinder where
   constructor MkCylinder
   texture : Texture
 
 
-IsShape Cylinder where
+Hitable Cylinder where
   hit (MkCylinder tex) ray@(MkRay origin dir) = 
     let a = x dir * x dir + z dir * z dir
         b = 2.0 * (x origin * x dir + z origin * z dir)
@@ -128,7 +131,7 @@ mkCylinder centre radius height tex =
           (MkCylinder tex)
 
 ||| Type representing a flat disc.
-export
+
 record Disc where
   constructor MkDisc
   texture : Texture
@@ -154,7 +157,7 @@ discHit just nothing ray@(MkRay ori dir) =
     else nothing
   
 
-IsShape Disc where
+Hitable Disc where
   hit (MkDisc tex) = discHit just Nothing
     where just ip d = 
             let mat = case tex of
@@ -171,12 +174,11 @@ mkDisc centre radius tex =
   mkShape $ MkTransformedShape (merge (scale radius radius 1.0) (translateByVector centre))  $ MkDisc tex
 
 
-export
 record SolidCylinder where
   constructor MkSolidCylinder
   shapes : Group
   
-IsShape SolidCylinder where
+Hitable SolidCylinder where
   hit (MkSolidCylinder gr) ray = hit gr ray
   hitBefore (MkSolidCylinder gr) ray = hitBefore gr ray
 
@@ -202,7 +204,7 @@ record CylinderDisc where
   texture : Texture
 
 
-IsShape CylinderDisc where
+Hitable CylinderDisc where
   hit (MkCylinderDisc off tex) = cylinderDiscHit off just Nothing
     where just ip d = 
             let mat = case tex of
@@ -212,15 +214,15 @@ IsShape CylinderDisc where
   hitBefore (MkCylinderDisc off _) ray dBound = cylinderDiscHit off just Nothing ray
     where just ip d = if d < dBound then Just d else Nothing
     
-IsSolid SolidCylinder where
+Solid SolidCylinder where
   inside (MkSolidCylinder _) (MkVector x y z) = 
     (-1) < y && y < 1 && sq x + sq y < 1
   
-mkSolidCylinder : (centre : Point) -> (radius, height : Double) -> (cyl, top, bot : Texture) -> Shape
+mkSolidCylinder : (centre : Point) -> (radius, height : Double) -> (cyl, top, bot : Texture) -> SolidShape
 mkSolidCylinder centre radius height cylTex topTex botTex = 
   let cyl = MkShape (MkCylinder cylTex)
       top = MkShape (MkCylinderDisc 1 topTex)
       bot = MkShape (MkCylinderDisc (-1) botTex) in
-  MkShape $ MkTransformedShape
+  MkSolidShape $ MkTransformedShape
    (merge (scale radius (height / 2) radius) (translateByVector centre))
           (MkSolidCylinder $ MkGroup [cyl,top,bot])

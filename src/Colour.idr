@@ -33,6 +33,7 @@ record Material where
   
 %name Material mat
 
+public export
 data Texture = MkConstTexture Material | MkTexture (Double -> Double -> Material)
 
 record RGB where
