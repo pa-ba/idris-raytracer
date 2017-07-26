@@ -8,6 +8,14 @@ import public Transformation
 %access export
 %default total
 
+kEpsilon : Double
+kEpsilon = 0.00001
+
+
+||| Equality up to epsilon
+eqEpsilon : Double -> Double -> Bool
+eqEpsilon d e = abs (d - e) < kEpsilon
+
 ||| This type collects the data that we need in case of a ray
 ||| intersection with a shape.
 public export

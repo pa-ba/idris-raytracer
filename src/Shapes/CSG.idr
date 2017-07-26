@@ -48,14 +48,15 @@ IsShape SolidShape where
       Trans tr' s => MkSolidShape (MkTransformedShape (merge tr' tr) s)
 
 
+private
+csgFuel : Nat
+csgFuel = 10
+
 
 ||| Type representing the union of two shapes.
 public export
 data Union : Type where
   MkUnion : (Solid s1, Solid s2) => s1 -> s2 -> Union
-
-csgFuel : Nat
-csgFuel = 10
 
 ||| Helper function for the hit function of 'union'
 private
@@ -98,7 +99,7 @@ Hitable Union where
           case hit s2 r of
             Nothing => res1
             res2@(Just h2) => 
-              if abs (distance h1 - distance h2) < 0.00001 then
+              if distance h1 `eqEpsilon` distance h2 then
                 Just (record {distance = min (distance h1) (distance h2)} h1)
               else if distance h1 <= distance h2 then res1 else res2
   
@@ -124,6 +125,83 @@ Solid Union where
 union : (s1, s2 : SolidShape) -> SolidShape
 union (MkSolidShape s) (MkSolidShape s') = MkSolidShape (MkUnion s s')  
 
+||| Type representing the intersection of two shapes.
+public export
+data Intersection : Type where
+  MkIntersection : (Solid s1, Solid s2) => s1 -> s2 -> Intersection
+  
+
+
+Hitable Intersection where
+  hit (MkIntersection s1 s2) ray = run csgFuel ray 0 where
+    run : Nat -> Ray -> Double -> Maybe Hit
+    run Z _ _ = Nothing
+    run (S fuel) ray dist =
+      case (hit s1 ray,hit s2 ray) of
+        (Just h1, Just h2) => 
+          if distance h1 `eqEpsilon` distance h2 then
+            Just (record {distance = (distance h1 `min` distance h2) + dist } h1)
+          else if distance h1 <= distance h2 then
+            let hp1 = march ray (distance h1) in
+            if inside s2 hp1 then Just (record {distance = distance h1 + dist} h1)
+            else 
+              let hp2 = march ray (distance h2) in
+              if inside s1 hp2 then Just (record {distance = distance h2 + dist} h2)
+              else run fuel (record {origin = hp2 + (2 * kEpsilon `scale` direction ray)} ray)
+                       (dist + 2 * kEpsilon + distance h2)
+          else 
+            let hp2 = march ray (distance h2) in
+            if inside s1 hp2 then Just (record {distance = distance h2 + dist} h2)
+            else 
+              let hp1 = march ray (distance h1) in
+              if inside s2 hp1 then Just (record {distance = distance h1 + dist} h1)
+              else run fuel (record {origin = hp1 + (2 * kEpsilon `scale` direction ray)} ray)
+                       (dist + 2 * kEpsilon + distance h1)
+        _ => Nothing
+
+  hitBefore (MkIntersection s1 s2) ray dBound = run csgFuel ray 0 where
+    retDist : Double -> Maybe Double
+    retDist dist = if dist < dBound then Just dist else Nothing
+    run : Nat -> Ray -> Double -> Maybe Double
+    run Z _ _ = Nothing
+    run (S fuel) ray dist =
+      let dBound' = dBound - dist in
+      case (hitBefore s1 ray dBound',hitBefore s2 ray dBound') of
+        (Just h1, Just h2) => 
+          if h1 `eqEpsilon` h2 then 
+            retDist ((h1 `min` h2) + dist)
+          else if h1 <= h2 then
+            let hp1 = march ray h1 in
+            if inside s2 hp1 then 
+              retDist (h1 + dist)
+            else 
+              let hp2 = march ray h2 in
+              if inside s1 hp2 then 
+                retDist (h2 + dist)
+              else 
+                let dist' = dist + 2 * kEpsilon + h2 in
+                if dist' < dBound then
+                  run fuel (record {origin = hp2 + (2 * kEpsilon `scale` direction ray)} ray) dist'
+                else Nothing
+          else 
+            let hp2 = march ray h2 in
+            if inside s1 hp2 then retDist (h2 + dist)
+            else 
+              let hp1 = march ray h1 in
+              if inside s2 hp1 then retDist (h1 + dist)
+              else 
+                let dist' = dist + 2 * kEpsilon + h1 in
+                if dist' < dBound then 
+                  run fuel (record {origin = hp1 + (2 * kEpsilon `scale` direction ray)} ray) dist'
+                else Nothing
+        _ => Nothing
+
+Solid Intersection where
+  inside (MkIntersection s1 s2) p = inside s1 p && inside s2 p
+  
+  
+intersection : SolidShape -> SolidShape -> SolidShape
+intersection (MkSolidShape s1) (MkSolidShape s2) = MkSolidShape (MkIntersection s1 s2)
 
 record Group where
   constructor MkGroup
