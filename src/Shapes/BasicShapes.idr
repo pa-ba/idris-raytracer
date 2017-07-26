@@ -8,6 +8,8 @@ import public LinearAlgebra
 import public Colour
 import public Transformation
 
+import Debug.Trace
+
 %access export
 %default total
 
@@ -255,25 +257,23 @@ record Box where
   front, back, top, bottom, left, right : Texture
 
 lookupMaterial : Texture -> (u,v : Double) -> Material
-lookupMaterial _ _ _ = (MkMaterial red 0
--- TODO: using the correct definition below results in a segmentation fault
--- lookupMaterial (MkConstTexture mat) _ _ = mat
--- lookupMaterial (MkTexture f) u v = f u v
+lookupMaterial (MkConstTexture mat) _ _ = mat
+lookupMaterial (MkTexture f) u v = f u v
+
+data FaceRes = Res Vector Material
 
 Hitable Box where
-  hit (MkBox low high front back top bottom left right) ray = thehit where
-    ret : Double -> Vector -> Texture -> Double -> Double -> Hit
-    ret distance n tex u v = MkHit distance (lookupMaterial tex u v) n
+  hit (MkBox low high front back top bottom left right) ray =  thehit where
     calculateIntersection : Double -> Face -> Hit
     calculateIntersection distance face =
-      let ip = march ray distance in
-      case face of
-        Front => ret distance normalFront front ((x ip-x low)/(x high-x low)) ((y ip-y low)/(y high-y low))
-        Back => ret distance normalBack back ((x ip-x low)/(x high-x low)) ((y ip-y low)/(y high-y low))
-        Left => ret distance normalLeft left ((y ip-y low)/(y high-y low))((z ip-z low)/(z high-z low))
-        Right => ret distance normalRight right ((y ip-y low)/(y high-y low))((z ip-z low)/(z high-z low))
-        Top => ret distance normalTop top ((x ip-x low)/(x high-x low)) ((z ip-z low)/(z high-z low))
-        Bottom => ret distance normalBottom bottom ((x ip-x low)/(x high-x low))((z ip-z low)/(z high-z low))
+      let ip = march ray distance
+      in case face of
+            Front => MkHit distance (lookupMaterial front ((x ip-x low)/(x high-x low)) ((y ip-y low)/(y high-y low))) normalFront
+            Back => MkHit distance (lookupMaterial back ((x ip-x low)/(x high-x low)) ((y ip-y low)/(y high-y low))) normalBack
+            Left => MkHit distance (lookupMaterial left ((y ip-y low)/(y high-y low)) ((z ip-z low)/(z high-z low))) normalLeft
+            Right => MkHit distance (lookupMaterial right ((y ip-y low)/(y high-y low)) ((z ip-z low)/(z high-z low))) normalRight
+            Top => MkHit distance (lookupMaterial top ((x ip-x low)/(x high-x low)) ((z ip-z low)/(z high-z low))) normalTop
+            Bottom => MkHit distance (lookupMaterial bottom ((x ip-x low)/(x high-x low)) ((z ip-z low)/(z high-z low))) normalBottom
          
     thehit : Maybe Hit
     thehit =
