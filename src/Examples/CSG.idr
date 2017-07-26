@@ -27,8 +27,8 @@ camera2 : Camera
 camera2 = MkCamera (mkPoint 0.0 0.0 4.0) (mkPoint 0.0 0.0 0.0) (MkVector 0.0 1.0 0.0) 2.0 2.0 2.0 500 500
 
 
-
-mkUnitBox : Texture -> SolidShape
+-- If I don't have the texture argument lazy I get a sigfault!
+mkUnitBox : Lazy Texture -> SolidShape
 mkUnitBox t = mkBox (mkPoint (-1) (-1) (-1)) (mkPoint 1.0 1.0 1.0) t t t t t t
 
 cube : SolidShape
@@ -48,7 +48,8 @@ sphere3 : SolidShape
 sphere3 = mkSphere (mkPoint (-0.5) 0.0 0.0) 0.2 (MkConstTexture (MkMaterial (Colour.yellow) 0.0))
 
 
-mkUnitCylinder : Texture -> SolidShape
+-- If I don't have the texture argument lazy I get a sigfault!
+mkUnitCylinder : Lazy Texture -> SolidShape
 mkUnitCylinder t = mkSolidCylinder (mkPoint 0.0 0.0 0.0) 1.0 2.0 t t t
 
 
