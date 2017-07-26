@@ -226,3 +226,109 @@ mkSolidCylinder centre radius height cylTex topTex botTex =
   MkSolidShape $ MkTransformedShape
    (merge (scale radius (height / 2) radius) (translateByVector centre))
           (MkSolidCylinder $ MkGroup [cyl,top,bot])
+
+private
+data Face = Front | Back | Top | Bottom | Left | Right
+
+private
+normalFront : Vector
+normalFront = MkVector 0.0 0.0 (-1.0)
+private
+normalBack : Vector
+normalBack = MkVector 0.0 0.0 1.0
+private
+normalLeft : Vector
+normalLeft = MkVector (-1.0) 0.0 0.0
+private
+normalRight : Vector
+normalRight = MkVector 1.0 0.0 0.0
+private
+normalTop : Vector
+normalTop = MkVector 0.0 1.0 0.0
+private
+normalBottom : Vector
+normalBottom = MkVector 0.0 (-1.0) 0.0
+
+record Box where
+  constructor MkBox
+  low, high : Point
+  front, back, top, bottom, left, right : Texture
+
+lookupMaterial : Texture -> (u,v : Double) -> Material
+lookupMaterial _ _ _ = (MkMaterial red 0
+-- TODO: using the correct definition below results in a segmentation fault
+-- lookupMaterial (MkConstTexture mat) _ _ = mat
+-- lookupMaterial (MkTexture f) u v = f u v
+
+Hitable Box where
+  hit (MkBox low high front back top bottom left right) ray = thehit where
+    ret : Double -> Vector -> Texture -> Double -> Double -> Hit
+    ret distance n tex u v = MkHit distance (lookupMaterial tex u v) n
+    calculateIntersection : Double -> Face -> Hit
+    calculateIntersection distance face =
+      let ip = march ray distance in
+      case face of
+        Front => ret distance normalFront front ((x ip-x low)/(x high-x low)) ((y ip-y low)/(y high-y low))
+        Back => ret distance normalBack back ((x ip-x low)/(x high-x low)) ((y ip-y low)/(y high-y low))
+        Left => ret distance normalLeft left ((y ip-y low)/(y high-y low))((z ip-z low)/(z high-z low))
+        Right => ret distance normalRight right ((y ip-y low)/(y high-y low))((z ip-z low)/(z high-z low))
+        Top => ret distance normalTop top ((x ip-x low)/(x high-x low)) ((z ip-z low)/(z high-z low))
+        Bottom => ret distance normalBottom bottom ((x ip-x low)/(x high-x low))((z ip-z low)/(z high-z low))
+         
+    thehit : Maybe Hit
+    thehit =
+      let o = origin ray
+          d = direction ray
+          a = 1.0 / x d
+          (txl,txh) = 
+            if a >= 0.0
+            then ((x low - x o) * a, (x high - x o) * a)
+            else ((x high - x o) * a, (x low - x o) * a)
+
+          b = 1.0 / y d
+          (tyl,tyh) = 
+            if b >= 0.0
+            then ((y low - y o) * b, (y high - y o) * b)
+            else ((y high - y o) * b, (y low - y o) * b)
+
+          c = 1.0 / z d
+          (tzl,tzh) = 
+            if c >= 0.0
+            then ((z low - z o) * c, (z high - z o) * c)
+            else ((z high - z o) * c, (z low - z o) * c)
+      
+          (tl,fl)  =
+            if txl > tyl && txl > tzl
+            then (txl, if a >= 0.0 then Left else Right)
+            else 
+              if tyl > tzl
+              then (tyl, if b >= 0.0 then Bottom else Top)
+              else (tzl, if c >= 0.0 then Back else Front)
+
+          (th,fh)  =
+            if txh < tyh && txh < tzh
+            then (txh, if a >= 0.0 then Right else Left)
+            else 
+              if tyh < tzh
+              then (tyh, if b >= 0.0 then Top else Bottom)
+              else (tzh, if c >= 0.0 then Front else Back)
+      in if tl < th && th > 0.0 
+         then
+           if tl > 0.0 
+           then Just (calculateIntersection tl fl)
+           else Just (calculateIntersection th fh)
+         else Nothing
+
+Solid Box where
+  inside (MkBox low high _ _ _ _ _ _) p = 
+    x low <= x p && x p <= x high &&
+    y low <= y p && y p <=  y high &&
+    z low <= z p && z p <=  z high
+    
+    
+mkBox : (low, high : Point) -> 
+        (front, back, top, bottom, left, right : Texture) -> SolidShape
+mkBox low high front back top bottom left right = 
+  MkSolidShape (MkBox low high front back top bottom left right)
+
+

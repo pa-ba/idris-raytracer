@@ -26,6 +26,15 @@ camera = MkCamera (mkPoint 16.0 16.0 16.0) (mkPoint 0.0 0.0 0.0) (MkVector (-1.0
 camera2 : Camera
 camera2 = MkCamera (mkPoint 0.0 0.0 4.0) (mkPoint 0.0 0.0 0.0) (MkVector 0.0 1.0 0.0) 2.0 2.0 2.0 500 500
 
+
+
+mkUnitBox : Texture -> SolidShape
+mkUnitBox t = mkBox (mkPoint (-1) (-1) (-1)) (mkPoint 1.0 1.0 1.0) t t t t t t
+
+cube : SolidShape
+cube = mkUnitBox (MkConstTexture (MkMaterial Colour.red 0.0))
+
+
 sphere : SolidShape
 sphere = mkSphere (mkPoint 0.0 0.0 0.0) 1.3 (MkConstTexture (MkMaterial (Colour.blue) 0.0))
 
@@ -58,3 +67,14 @@ renderUnion =
   let scene = MkScene [CSG.union sphere1 sphere2] [l1, l2] (ambientLight) 0
       camera = camera2
   in render "union.ppm" scene camera
+  
+  
+renderIntersection : IO ()
+renderIntersection =
+  let scene = MkScene [intersection sphere1 sphere2] [l1, l2 ] ambientLight 0
+  in render "intersection.ppm" scene camera2
+
+renderIntersection2 : IO ()
+renderIntersection2 =
+  let scene = MkScene [cube] [l1, l2] ambientLight 0
+  in render "intersection2.ppm" scene camera

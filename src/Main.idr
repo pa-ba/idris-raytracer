@@ -7,7 +7,8 @@ import Examples.Texture
 
 main : IO ()
 main = do
-  renderSolidCylinder
+  renderIntersection2
+  -- renderSolidCylinder
   -- renderDiscs
   -- renderReflectiveSpheres
   -- renderHollowCylinder
