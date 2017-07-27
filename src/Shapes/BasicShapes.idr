@@ -75,8 +75,8 @@ Hitable Sphere where
     let a = dir `dot` dir
         b = 2.0 * (origin `dot` dir)
         c = (origin `dot` origin) - 1
-    in solve2ndD' Nothing id (const True) just a b c
-    where just t = if (t < dBound) then Just t else Nothing
+    in solve2ndD' False id (const True) just a b c
+    where just t = t < dBound
     
 Solid Sphere where
   inside (MkSphere _) (MkVector x y z) = x * x + y * y + z * z < 1
@@ -117,7 +117,7 @@ Hitable Cylinder where
     let a = x dir * x dir + z dir * z dir
         b = 2.0 * (x origin * x dir + z origin * z dir)
         c = (x origin * x origin + z origin * z origin) - 1.0
-    in solve2ndD' Nothing id check (Just) a b c
+    in solve2ndD' False id check (const True) a b c
     where check d = 
             if d >= dBound then False
             else
@@ -166,8 +166,8 @@ Hitable Disc where
                         MkConstTexture m => m
                         MkTexture t => t ((x ip + 1)/ 2) ((y ip + 1) / 2)
             in Just (MkHit d mat (MkVector 0 0 1))
-  hitBefore (MkDisc _) ray dBound = discHit just Nothing ray
-    where just ip d = if d < dBound then Just d else Nothing
+  hitBefore (MkDisc _) ray dBound = discHit just False ray
+    where just ip d = d < dBound
 
 
 ||| Construct a flat disc.
@@ -213,8 +213,8 @@ Hitable CylinderDisc where
                         MkConstTexture m => m
                         MkTexture t => t ((x ip + 1)/ 2) ((z ip + 1) / 2)
             in Just (MkHit d mat (MkVector 0 1 0))
-  hitBefore (MkCylinderDisc off _) ray dBound = cylinderDiscHit off just Nothing ray
-    where just ip d = if d < dBound then Just d else Nothing
+  hitBefore (MkCylinderDisc off _) ray dBound = cylinderDiscHit off just False ray
+    where just ip d = d < dBound
     
 Solid SolidCylinder where
   inside (MkSolidCylinder _) (MkVector x y z) = 

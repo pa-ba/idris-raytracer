@@ -31,11 +31,11 @@ mutual
   public export
   interface Hitable s where
     hit : s -> Ray -> Maybe Hit
-    hitBefore : s -> Ray -> Double -> Maybe Double
+    hitBefore : s -> Ray -> Double -> Bool
     hitBefore s r d = 
       case hit s r of
-        Just (MkHit distance _ _) => if (distance <= d) then Just distance else Nothing
-        Nothing => Nothing
+        Just (MkHit distance _ _) => distance <= d
+        Nothing => False
     transformedShape : s -> DecomposeTrans
     transformedShape _ = defaultTrans
     
@@ -68,7 +68,7 @@ Hitable s => Hitable (TransformedShape s) where
 public export
 interface IsShape a where
   hitShape : a -> Ray -> Maybe Hit
-  hitShapeBefore : a -> Ray -> Double -> Maybe Double
+  hitShapeBefore : a -> Ray -> Double -> Bool
   transform : Transformation -> a -> a
   
 

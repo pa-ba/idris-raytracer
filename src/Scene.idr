@@ -26,7 +26,7 @@ record Scene where
 total
 findShadowHit : ShapeList -> Ray -> Double -> Bool
 findShadowHit [] r d = False
-findShadowHit (x :: xs) r d = isJust (hitShapeBefore x r d) || findShadowHit xs r d
+findShadowHit (x :: xs) r d = hitShapeBefore x r d || findShadowHit xs r d
 
 
 traceShadowRays : ShapeList -> List Light -> Ambient -> Point -> Vector -> Colour
