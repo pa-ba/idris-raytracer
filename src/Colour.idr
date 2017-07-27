@@ -61,7 +61,7 @@ green : Colour
 green = MkColour 0 0.25 0
 
 blue : Colour
-blue = MkColour 0 0 0.25
+blue = MkColour 0 0 1
 
 magenta : Colour
 magenta = MkColour 1 0 1

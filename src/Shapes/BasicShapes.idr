@@ -73,8 +73,8 @@ Hitable Sphere where
 
   hitBefore (MkSphere tex) (MkRay origin dir) dBound = 
     let a = dir `dot` dir
-        b = 2.0 * (origin `dot` dir) - 1
-        c = origin `dot` origin
+        b = 2.0 * (origin `dot` dir)
+        c = (origin `dot` origin) - 1
     in solve2ndD' Nothing id (const True) just a b c
     where just t = if (t < dBound) then Just t else Nothing
     
@@ -218,7 +218,7 @@ Hitable CylinderDisc where
     
 Solid SolidCylinder where
   inside (MkSolidCylinder _) (MkVector x y z) = 
-    (-1) < y && y < 1 && sq x + sq y < 1
+    (-1) <= y && y <= 1 && sq x + sq z <= 1
   
 mkSolidCylinder : (centre : Point) -> (radius, height : Double) -> (cyl, top, bot : Texture) -> SolidShape
 mkSolidCylinder centre radius height cylTex topTex botTex = 

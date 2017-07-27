@@ -50,7 +50,7 @@ IsShape SolidShape where
 
 private
 csgFuel : Nat
-csgFuel = 10
+csgFuel = 100
 
 
 ||| Type representing the union of two shapes.
@@ -237,9 +237,10 @@ Hitable Subtraction where
               h'@(Just h) => 
                 run fuel h' (dist + distance h)
                     (record {origin = march ray (distance h)} ray)
-  hitBefore (MkSubtraction s1 s2) ray dBound = run csgFuel Nothing 0 ray where
+
+  hitBefore (MkSubtraction s1 s2) ray dBound = run csgFuel False 0 ray where
     mutual
-      run : Nat -> Maybe Double -> Double -> Ray -> Maybe Double
+      run : Nat -> Bool -> Double -> Ray -> Maybe Double
       run Z _ _ _ = Nothing
       run (S fuel) result dist ray =
         if inside s2 (origin ray) then
@@ -251,22 +252,21 @@ Hitable Subtraction where
                 if inside s1 p then
                   Just dist'
                 else
-                  run fuel Nothing dist'
+                  run fuel False dist'
                     (record {origin = p + ((2 * kEpsilon) `scale` direction ray)} ray)
               else Nothing
             Nothing => run' fuel result dist ray
         else run' fuel  result dist ray
-      run' : Nat -> Maybe Double -> Double -> Ray -> Maybe Double
+      run' : Nat -> Bool -> Double -> Ray -> Maybe Double
       run' fuel result dist ray =
-        case result of
-          Just _ => Just dist
-          Nothing =>
+        if result then Just dist
+        else
             case hitBefore s1 ray (dBound - dist) of
               Nothing => Nothing
-              h'@(Just h) =>
+              Just h =>
                 let dist' = dist + h in
                 if dist' < dBound then
-                  run fuel h' dist'
+                  run fuel True dist'
                     (record {origin = march ray h} ray)
                 else Nothing
 

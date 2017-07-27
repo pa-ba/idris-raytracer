@@ -77,5 +77,16 @@ renderIntersection =
 
 renderIntersection2 : IO ()
 renderIntersection2 =
-  let scene = MkScene [cube] [l1, l2] ambientLight 0
+  let scene = MkScene [intersection cube sphere] [l1, l2] ambientLight 0
   in render "intersection2.ppm" scene camera
+
+
+renderLantern : IO ()
+renderLantern =
+  let scene = MkScene [subtraction (intersection cube sphere ) cross] [l1, l2, l3 ] ambientLight 0
+  in render "lantern.ppm" scene camera
+
+renderSubtraction : IO ()
+renderSubtraction =
+  let scene = MkScene [subtraction sphere2 sphere1] [l1, l2 ] ambientLight 0 ;
+  in render "subtraction.ppm" scene camera
