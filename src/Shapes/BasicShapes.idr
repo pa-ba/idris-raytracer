@@ -264,16 +264,17 @@ data FaceRes = Res Vector Material
 
 Hitable Box where
   hit (MkBox low high front back top bottom left right) ray =  thehit where
-    calculateIntersection : Double -> Face -> Hit
-    calculateIntersection distance face =
-      let ip = march ray distance
-      in case face of
-            Front => MkHit distance (lookupMaterial front ((x ip-x low)/(x high-x low)) ((y ip-y low)/(y high-y low))) normalFront
-            Back => MkHit distance (lookupMaterial back ((x ip-x low)/(x high-x low)) ((y ip-y low)/(y high-y low))) normalBack
-            Left => MkHit distance (lookupMaterial left ((y ip-y low)/(y high-y low)) ((z ip-z low)/(z high-z low))) normalLeft
-            Right => MkHit distance (lookupMaterial right ((y ip-y low)/(y high-y low)) ((z ip-z low)/(z high-z low))) normalRight
-            Top => MkHit distance (lookupMaterial top ((x ip-x low)/(x high-x low)) ((z ip-z low)/(z high-z low))) normalTop
-            Bottom => MkHit distance (lookupMaterial bottom ((x ip-x low)/(x high-x low)) ((z ip-z low)/(z high-z low))) normalBottom
+    calculateIntersection : Double -> (Face, Vector) -> Hit
+    calculateIntersection distance (face, normal) =
+       let mat = let ip = march ray distance in
+                   case face of
+                     Front => lookupMaterial front ((x ip-x low)/(x high-x low)) ((y ip-y low)/(y high-y low))
+                     Back => lookupMaterial back ((x ip-x low)/(x high-x low)) ((y ip-y low)/(y high-y low))
+                     Left => lookupMaterial left ((y ip-y low)/(y high-y low)) ((z ip-z low)/(z high-z low))
+                     Right => lookupMaterial right ((y ip-y low)/(y high-y low)) ((z ip-z low)/(z high-z low))
+                     Top =>  lookupMaterial top ((x ip-x low)/(x high-x low)) ((z ip-z low)/(z high-z low))
+                     Bottom => lookupMaterial bottom ((x ip-x low)/(x high-x low)) ((z ip-z low)/(z high-z low))
+      in MkHit distance mat normal
          
     thehit : Maybe Hit
     thehit =
@@ -299,19 +300,19 @@ Hitable Box where
       
           (tl,fl)  =
             if txl > tyl && txl > tzl
-            then (txl, if a >= 0.0 then Left else Right)
+            then (txl, if a >= 0.0 then (Left,normalLeft) else (Right,normalRight))
             else 
               if tyl > tzl
-              then (tyl, if b >= 0.0 then Bottom else Top)
-              else (tzl, if c >= 0.0 then Back else Front)
+              then (tyl, if b >= 0.0 then (Bottom,normalBottom) else (Top, normalTop))
+              else (tzl, if c >= 0.0 then (Back, normalBack) else (Front,normalFront))
 
           (th,fh)  =
             if txh < tyh && txh < tzh
-            then (txh, if a >= 0.0 then Right else Left)
+            then (txh, if a >= 0.0 then (Right,normalRight) else (Left,normalLeft))
             else 
               if tyh < tzh
-              then (tyh, if b >= 0.0 then Top else Bottom)
-              else (tzh, if c >= 0.0 then Front else Back)
+              then (tyh, if b >= 0.0 then (Top,normalTop) else (Bottom,normalBottom))
+              else (tzh, if c >= 0.0 then (Front,normalFront) else (Back,normalBack))
       in if tl < th && th > 0.0 
          then
            if tl > 0.0 

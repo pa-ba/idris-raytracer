@@ -22,8 +22,8 @@ public export
 record Hit where
   constructor MkHit
   distance : Double
-  material : Material
-  normal : Vector
+  material : Lazy Material
+  normal : Lazy Vector
       
 %name Hit h
 
