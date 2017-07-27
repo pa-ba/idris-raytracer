@@ -212,55 +212,53 @@ data Subtraction : Type where
 
 Hitable Subtraction where
   hit (MkSubtraction s1 s2) ray = run csgFuel Nothing 0 ray where
-    mutual
-      run : Nat -> Maybe Hit -> Double -> Ray -> Maybe Hit
-      run Z _ _ _ = Nothing
-      run (S fuel) result dist ray =
-        if inside s2 (origin ray) then
-          case hit s2 ray of
-            Just h2 =>
-              let p = march ray (distance h2) in
-              if inside s1 p then
-                Just (record {distance = distance h2 + dist} h2)
-              else
-                run fuel Nothing (dist + distance h2 + 2*kEpsilon)
-                  (record {origin = p + ((2 * kEpsilon) `scale` direction ray)} ray)
-            Nothing => run' fuel result dist ray
-        else run' fuel  result dist ray
-      run' : Nat -> Maybe Hit -> Double -> Ray -> Maybe Hit
-      run' fuel result dist ray =
-        case result of
-          Just h => Just (record { distance = dist} h)
-          Nothing =>
-            case hit s1 ray of
-              Nothing => Nothing
-              h'@(Just h) => 
-                run fuel h' (dist + distance h)
-                    (record {origin = march ray (distance h)} ray)
+    run : Nat -> Maybe Hit -> Double -> Ray -> Maybe Hit
+    run Z _ _ _ = Nothing
+    run (S fuel) result dist ray =
+      if inside s2 (origin ray) then
+        case hit s2 ray of
+          Just h2 =>
+            let p = march ray (distance h2) in
+            if inside s1 p then
+              Just (record {distance = distance h2 + dist} h2)
+            else
+              run fuel Nothing (dist + distance h2 + 2*kEpsilon)
+                (record {origin = p + ((2 * kEpsilon) `scale` direction ray)} ray)
+          Nothing => noHit
+      else noHit where
+        noHit : Lazy (Maybe Hit)
+        noHit =
+          case result of
+            Just h => Just (record { distance = dist} h)
+            Nothing =>
+              case hit s1 ray of
+                Nothing => Nothing
+                h'@(Just h) => 
+                  run fuel h' (dist + distance h)
+                      (record {origin = march ray (distance h)} ray)
 
   hitBefore (MkSubtraction s1 s2) ray dBound = run csgFuel False 0 ray where
-    mutual
-      run : Nat -> Bool -> Double -> Ray -> Maybe Double
-      run Z _ _ _ = Nothing
-      run (S fuel) result dist ray =
-        if inside s2 (origin ray) then
-          case hitBefore s2 ray (dBound - dist) of
-            Just h2 =>
-              let p = march ray h2
-                  dist' = dist + h2 + 2*kEpsilon in
-              if dist' < dBound then
-                if inside s1 p then
-                  Just dist'
-                else
-                  run fuel False dist'
-                    (record {origin = p + ((2 * kEpsilon) `scale` direction ray)} ray)
-              else Nothing
-            Nothing => run' fuel result dist ray
-        else run' fuel  result dist ray
-      run' : Nat -> Bool -> Double -> Ray -> Maybe Double
-      run' fuel result dist ray =
-        if result then Just dist
-        else
+    run : Nat -> Bool -> Double -> Ray -> Maybe Double
+    run Z _ _ _ = Nothing
+    run (S fuel) result dist ray =
+      if inside s2 (origin ray) then
+        case hitBefore s2 ray (dBound - dist) of
+          Just h2 =>
+            let p = march ray h2
+                dist' = dist + h2 + 2*kEpsilon in
+            if dist' < dBound then
+              if inside s1 p then
+                Just dist'
+              else
+                run fuel False dist'
+                  (record {origin = p + ((2 * kEpsilon) `scale` direction ray)} ray)
+            else Nothing
+          Nothing => noHit
+      else noHit where
+        noHit : Lazy (Maybe Double)
+        noHit = 
+          if result then Just dist
+          else 
             case hitBefore s1 ray (dBound - dist) of
               Nothing => Nothing
               Just h =>
@@ -269,6 +267,9 @@ Hitable Subtraction where
                   run fuel True dist'
                     (record {origin = march ray h} ray)
                 else Nothing
+        
+
+
 
 
 
